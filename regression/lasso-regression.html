@@ -1,0 +1,77 @@
+<html>
+<head>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="../css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="../css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+</head>
+<div class="row center" id="text">
+</div>
+<div class="row">
+  <div class="col s12 m8">
+    <div id="div_output" style="height: 800px;"></div>
+  </div>
+  <div class="col s12 m4">
+    <div class="row">
+      <div id="div_layer" style="height: 300px;"></div>
+    </div>
+    <div class="row">
+      <div id="div_loss" style="height: 200px;"></div>
+    </div>
+    <div class="row" id="log" style="height: 250px; overflow:auto;">
+    </div>
+  </div>
+</div>
+<script src="../js/tf.js"></script>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/numeric-1.2.6.min.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/plotly-latest.min.js"></script>
+<script src="../data/temperature.js"> </script>
+<script>
+$('#text').append("<h5 class='header light'>Done load TEMPERATURE dataset, total row "+TEMPERATURE['X'].length+"</h5><br>");
+const dense_layer1 = tf.layers.dense({units: 100, activation: 'linear',
+kernel_regularizer:tf.regularizers.l1(0.01),
+activity_regularizer:tf.regularizers.l1(0.01)});
+const dense_layer2 = tf.layers.dense({units: 1, activation: 'linear',
+kernel_regularizer:tf.regularizers.l1(0.01),
+activity_regularizer:tf.regularizers.l1(0.01)});
+setTimeout(function(){
+  const f = x => dense_layer2.apply(dense_layer1.apply(x));
+  const cost = (label, pred) => tf.square(tf.sub(pred,label)).mean();
+  const learning_rate = 0.1;
+  const optimizer = tf.train.adam(learning_rate);
+  const epoch = 20;
+  arr_loss = [], arr_layer = []
+  function async_training_loop(callback) {
+    (function loop(i) {
+      var total_loss = 0, total_acc = 0;
+      batch_x = tf.tensor(TEMPERATURE['degree']);
+      batch_y = tf.tensor(TEMPERATURE['Y']).reshape([-1,1]);
+      loss = parseFloat(cost(batch_y, f(batch_x)).toString().slice(7));
+      optimizer.minimize(() => cost(batch_y, f(batch_x)));
+      arr_loss.push(loss)
+      flatten_layer = tf_nj_list_flatten(dense_layer1['kernel']['val'].flatten())
+      flatten_layer = flatten_layer.concat(tf_nj_list_flatten(dense_layer2['kernel']['val'].flatten()))
+      predicted = tf_nj_list_flatten(f(batch_x).flatten())
+      arr_layer.push(flatten_layer)
+      plot_regression({'x':TEMPERATURE['X'],'y':TEMPERATURE['Y'],'name':'scatter time vs temperature',
+      'title':'LASSO time vs temperature','x-title':'time','y-title':'temperature','div':'div_output',
+      'x-line':TEMPERATURE['X'],'y-line':predicted})
+      plot_joyplot(arr_layer,"div_layer",'layers histogram')
+      plot_graph({'epoch':arange(0,arr_loss.length,1),'accuracy':[],'loss':arr_loss},false)
+      $('#log').append('Epoch: '+(i+1)+', loss: '+loss+'<br>');
+      if (i < (epoch-1)) {
+        setTimeout(function() {loop(++i)}, 10);
+      } else {
+        callback();
+      }
+    }(0));
+  }
+  async_training_loop(function() {
+    $('#log').append('Done training!');
+  });
+}, 5);
+</script>
+</html>
+

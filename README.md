@@ -1,12 +1,14 @@
 # Tensorflow-JS-Projects
 Web projects using Tensorflow JS, Plotly, D3, Echarts, NumJS, and NumericJS
 
-## Dataset used, data/
-1. MNIST
-2. Iris
-3. [Bahasa Sentiment](https://www.kaggle.com/huseinzol05/news-sentiment-in-bahasa)
-4. Stock market
-5. Dummy multivariate dataset
+## Completed models
+1. Tensorboard-like histogram visualization on MNIST
+2. Decision boundaries for IRIS using PCA and SVD
+3. Linear, Polynomial, Ridge, Lasso and Elasticnet Regression
+
+## Incoming models
+1. Realtime stock forecasting
+2. Realtime sentiment analysis
 
 ## How to run
 1. Just click any .html and wait the output, thats all!
@@ -18,6 +20,12 @@ Web projects using Tensorflow JS, Plotly, D3, Echarts, NumJS, and NumericJS
 
 #### IRIS with PCA decision boundaries, mnist/pca.html
 ![alt text](screenshot/pca-iris.png)
+
+#### linear regression, regression/linear-regression.html
+![alt text](screenshot/linear.png)
+
+#### elasticnet regression, regression/elastic-regression.html
+![alt text](screenshot/elasticnet.png)
 
 #### Feed-forward on MNIST, mnist/feed-forward-mnist.html
 ```text
@@ -67,7 +75,9 @@ Epoch: 10, avg loss: 0.20142345815801468, avg acc: 0.9407051282051282
 Done training!
 ```
 
-## Incoming
-1. Realtime stock forecasting
-2. Realtime regression
-3. Realtime sentiment analysis
+## Dataset used, data/
+1. MNIST
+2. Iris
+3. [Bahasa Sentiment](https://www.kaggle.com/huseinzol05/news-sentiment-in-bahasa)
+4. Stock market
+5. Dummy multivariate dataset

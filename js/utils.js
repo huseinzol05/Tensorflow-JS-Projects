@@ -172,7 +172,7 @@ function plot_map(data, X_mean, Y_mean, arr_X, arr_Y){
   Plotly.newPlot('div_output', data_map, layout);
 }
 
-function plot_graph(data){
+function plot_graph(data,with_acc=true){
   var trace_loss = {
     x: data['epoch'],
     y: data['loss'],
@@ -209,7 +209,7 @@ function plot_graph(data){
     }
   }
   Plotly.newPlot('div_loss', [trace_loss], layout_loss);
-  Plotly.newPlot('div_acc', [trace_acc], layout_acc);
+  if(with_acc)Plotly.newPlot('div_acc', [trace_acc], layout_acc);
 }
 function plot_joyplot(x_outside,div,title,btm_gap=0.1, top_gap=0.25, gap=0.1,ratio=1.0){
   concat_x = [], concat_y = []
@@ -297,6 +297,12 @@ function plot_joyplot(x_outside,div,title,btm_gap=0.1, top_gap=0.25, gap=0.1,rat
     "hovermode":"closest",
     "font":{
       "family":"Balto"
+    },
+    margin: {
+      b: 50,
+      t: 25,
+      pad: 4,
+      l:50
     }
   }
   Plotly.newPlot(div, data_joyplot, layout);
@@ -328,4 +334,39 @@ function histogram(arr,bins=30,norm=true,jitter=0.001){
   sum_hist = hist.reduce(getSum)
   if(norm) for(var b = 0; b < arr_bins.length;b++) hist[b] /= sum_hist
   return {'y':hist,'x':x_arange}
+}
+function plot_regression(data){
+  var data_map = [
+    {
+      x: data['x'],
+      y: data['y'],
+      name: data['name'],
+      mode: 'markers',
+      type: 'scatter',
+      marker: {
+        color: 'red'
+      }
+    },
+    {
+      x: data['x-line'],
+      y: data['y-line'],
+      mode: 'lines',
+      name: 'linear regressed',
+      type: 'scatter',
+      line: {
+        color: 'blue',
+      }
+    }
+  ];
+  var layout = {
+    title: data['title'],
+    showlegend: true,
+    xaxis:{
+      title:data['x-title']
+    },
+    yaxis:{
+      title:data['y-title']
+    }
+  }
+  Plotly.newPlot(data['div'], data_map, layout);
 }
