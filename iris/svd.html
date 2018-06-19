@@ -1,0 +1,101 @@
+<html>
+<head>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="../css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="../css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+</head>
+<div class="row center" id="text">
+</div>
+<div class="row">
+  <div class="col s12 m8">
+    <div id="div_output" style="height: 800px;"></div>
+  </div>
+  <div class="col s12 m4">
+    <div class="row">
+      <div id="div_loss" style="height: 250px;"></div>
+    </div>
+    <div class="row">
+      <div id="div_acc" style="height: 250px;"></div>
+    </div>
+    <div class="row" id="log" style="height: 250px; overflow:auto;">
+    </div>
+  </div>
+</div>
+<script src="../js/tf.js"></script>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/numeric-1.2.6.min.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/plotly-latest.min.js"></script>
+<script src="../data/iris.js"> </script>
+<script>
+
+$('#text').append("<h5 class='header light'>Done load IRIS dataset, total row "+IRIS['data'].length+"</h5><br>");
+setTimeout(function(){
+  shuffle(IRIS['data'], IRIS['label'])
+  out_svd = svd(IRIS['data'],2)
+  X = tf_slice_tolist(out_svd.slice([0,0],[-1,1]))
+  Y = tf_slice_tolist(out_svd.slice([0,1],[-1,1]))
+  encoder_flower = label_encoder(IRIS.label)
+  onehot = one_hot(encoder_flower)
+  arr_X = [], arr_Y = []
+  for(var n = 0; n < encoder_flower['unique'].length; n++){
+    var indices = get_index(encoder_flower['encode'], n)
+    arr_X.push(tf_str_tolist(tf.tensor(get_elements(X, indices)).mean()))
+    arr_Y.push(tf_str_tolist(tf.tensor(get_elements(Y, indices)).mean()))
+  }
+  X_mean = tf_str_tolist(out_svd.slice([0,0],[-1,1]).mean())
+  Y_mean = tf_str_tolist(out_svd.slice([0,1],[-1,1]).mean())
+  X_min = tf_str_tolist(out_svd.slice([0,0],[-1,1]).min()) - 0.5, X_max = tf_str_tolist(out_svd.slice([0,0],[-1,1]).max()) + 0.5
+  Y_min = tf_str_tolist(out_svd.slice([0,1],[-1,1]).min()) - 0.5, Y_max = tf_str_tolist(out_svd.slice([0,1],[-1,1]).max()) + 0.5
+  xx = arange(X_min,X_max,0.1)
+  yy = arange(Y_min,Y_max,0.1)
+  xx_tensor = tf.tensor(xx).tile([yy.length])
+  yy_tensor = tf.tensor(yy).tile([xx.length]).reshape([xx.length,yy.length]).transpose()
+  contour = tf.stack([xx_tensor.flatten(),yy_tensor.flatten()],1)
+
+  const dense_layer1 = tf.layers.dense({units: 256, activation: 'relu'});
+  const dense_layer2 = tf.layers.dense({units: 100, activation: 'relu'});
+  const dense_layer3 = tf.layers.dense({units: 3, activation: 'linear'});
+  const f = x => dense_layer3.apply(dense_layer2.apply(dense_layer1.apply(x)));
+  const cost = (label, pred) => tf.losses.softmaxCrossEntropy(label, pred).mean();
+  const accuracy = (label, pred) => tf.cast(tf.equal(label.argMax(1),pred.argMax(1)),'float32').mean();
+  const predict_contour = x => dense_layer3.apply(dense_layer2.apply(dense_layer1.apply(x))).argMax(1);
+  const learning_rate = 0.001;
+  const optimizer = tf.train.adam(learning_rate);
+  const batch_size = 16;
+  const epoch = 10;
+  arr_loss = [], arr_acc = []
+  function async_training_loop(callback) {
+    (function loop(i) {
+      var total_loss = 0, total_acc = 0;
+      for(var k = 0; k < Math.floor(IRIS['data'].length/batch_size)*batch_size; k+=batch_size){
+        batch_x = out_svd.slice([k,0],[batch_size,-1])
+        batch_y = tf.tensor(onehot.slice(k,k+batch_size));
+        total_loss += parseFloat(cost(batch_y, f(batch_x)).toString().slice(7));
+        total_acc += parseFloat(accuracy(batch_y, f(batch_x)).toString().slice(7));
+        optimizer.minimize(() => cost(batch_y, f(batch_x)));
+      }
+      total_loss /= Math.floor(IRIS['data'].length/batch_size);
+      total_acc /= Math.floor(IRIS['data'].length/batch_size);
+      arr_loss.push(total_loss)
+      arr_acc.push(total_acc)
+      $('#log').append('Epoch: '+(i+1)+', avg loss: '+total_loss+', avg acc: '+total_acc+'<br>');
+      predicted = tf_nj_list(predict_contour(contour).reshape([yy.length,xx.length]))
+      plot_map({'z':predicted,'xx':xx,'y_':yy,'color':encoder_flower['encode'],'x':X,'y':Y,'label':encoder_flower['unique']},
+      X_mean,Y_mean,arr_X,arr_Y)
+      plot_graph({'epoch':arange(0,arr_loss.length,1),'accuracy':arr_acc,'loss':arr_loss})
+      if (i < (epoch-1)) {
+        setTimeout(function() {loop(++i)}, 2000);
+      } else {
+        callback();
+      }
+    }(0));
+  }
+  async_training_loop(function() {
+    $('#log').append('Done training!');
+  });
+}, 100);
+
+</script>
+</html>

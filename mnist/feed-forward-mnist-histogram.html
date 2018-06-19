@@ -1,0 +1,84 @@
+<html>
+<head>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="../css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="../css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+</head>
+<div class="row center" id="text">
+</div>
+<div class="row">
+  <div class="col s12 m8">
+    <div class="row">
+      <div id="div_layer2" style="height: 400px;"></div>
+    </div>
+    <div class="row">
+      <div id="div_layer3" style="height: 400px;"></div>
+    </div>
+  </div>
+  <div class="col s12 m4">
+    <div class="row">
+      <div id="div_loss" style="height: 250px;"></div>
+    </div>
+    <div class="row">
+      <div id="div_acc" style="height: 250px;"></div>
+    </div>
+    <div class="row" id="log" style="height: 250px; overflow:auto;">
+    </div>
+  </div>
+</div>
+<script src="../js/tf.js"></script>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/plotly-latest.min.js"></script>
+<script src="../data/mnist.js"> </script>
+<script>
+$('#text').append("<h5 class='header light'>Done load MNIST dataset, total row "+MNIST['data'].length+"</h5><br>");
+const dense_layer1 = tf.layers.dense({units: 100, activation: 'relu'});
+const dense_layer2 = tf.layers.dense({units: 32, activation: 'relu'});
+const dense_layer3 = tf.layers.dense({units: 10, activation: 'linear'});
+setTimeout(function(){
+  const f = x => dense_layer3.apply(dense_layer2.apply(dense_layer1.apply(x)));
+  const cost = (label, pred) => tf.losses.softmaxCrossEntropy(label, pred).mean();
+  const accuracy = (label, pred) => tf.cast(tf.equal(label.argMax(1),pred.argMax(1)),'float32').mean();
+  const learning_rate = 0.0001;
+  const optimizer = tf.train.adam(learning_rate);
+  const batch_size = 128;
+  const epoch = 20;
+  arr_loss = [], arr_acc = [], arr_layer2 = [], arr_layer3 = []
+  function async_training_loop(callback) {
+    (function loop(i) {
+      var total_loss = 0, total_acc = 0;
+      for(var k = 0; k < Math.floor(MNIST['data'].length/batch_size)*batch_size; k+=batch_size){
+        batch_x = tf.tensor(MNIST['data'].slice(k,k+batch_size));
+        batch_y = tf.tensor(MNIST['label'].slice(k,k+batch_size));
+        total_loss += parseFloat(cost(batch_y, f(batch_x)).toString().slice(7));
+        total_acc += parseFloat(accuracy(batch_y, f(batch_x)).toString().slice(7));
+        optimizer.minimize(() => cost(batch_y, f(batch_x)));
+      }
+      total_loss /= Math.floor(MNIST['data'].length/batch_size);
+      total_acc /= Math.floor(MNIST['data'].length/batch_size);
+      arr_loss.push(total_loss)
+      arr_acc.push(total_acc)
+      $('#log').append('Epoch: '+(i+1)+', avg loss: '+total_loss+', avg acc: '+total_acc+'<br>');
+      flatten_layer = tf_nj_list_flatten(dense_layer2['kernel']['val'].flatten())
+      arr_layer2.push(flatten_layer)
+      plot_joyplot(arr_layer2,"div_layer2",'layer 2 histogram')
+      flatten_layer = tf_nj_list_flatten(dense_layer3['kernel']['val'].flatten())
+      arr_layer3.push(flatten_layer)
+      plot_joyplot(arr_layer3,"div_layer3",'layer 3 histogram')
+      plot_graph({'epoch':arange(0,arr_loss.length,1),'accuracy':arr_acc,'loss':arr_loss})
+      if (i < (epoch-1)) {
+        setTimeout(function() {loop(++i)}, 3000);
+      } else {
+        callback();
+      }
+    }(0));
+  }
+  async_training_loop(function() {
+    $('#log').append('Done training!');
+  });
+}, 5);
+
+</script>
+</html>

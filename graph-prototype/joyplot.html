@@ -1,0 +1,27 @@
+<html>
+<head>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="../css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="../css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+</head>
+<div class="row">
+  <div class="col s12 m12">
+    <div id="div_output" style="height: 400px;width:600px;"></div>
+  </div>
+</div>
+<script src="../js/d3.v5.min.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/plotly-latest.min.js"></script>
+<script>
+var x_outside = []
+for (var n = 0; n < 10; n ++) {
+  var nested = []
+  for (var i = 0; i < 500; i ++) {
+    nested[i] = Math.random()
+  }
+  x_outside.push(nested)
+}
+plot_joyplot(x_outside,"div_output",'layer 1')
+
+</script>

@@ -1,0 +1,25 @@
+<html>
+<div id="text">
+</div>
+<script src="js/tf.js"></script>
+<script src="js/jquery-3.3.1.min.js"></script>
+<script>
+const xs = tf.tensor1d([0, 1, 2, 3]);
+const ys = tf.tensor1d([1.1, 5.9, 16.8, 33.9]);
+const a = tf.scalar(Math.random()).variable();
+const b = tf.scalar(Math.random()).variable();
+const c = tf.scalar(Math.random()).variable();
+
+// y = a * x^2 + b * x + c.
+const f = x => a.mul(x.square()).add(b.mul(x)).add(c);
+const cost = (pred, label) => pred.sub(label).square().mean();
+
+const learningRate = 0.01;
+const optimizer = tf.train.sgd(learningRate);
+
+for (i = 0; i < 100; i++) {
+  $('#text').append("Epoch "+(i+1)+", loss "+cost(f(xs), ys).toString().slice(7)+"<br>");
+  optimizer.minimize(() => cost(f(xs), ys));
+}
+</script>
+</html>
