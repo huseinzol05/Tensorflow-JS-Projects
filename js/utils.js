@@ -89,6 +89,21 @@ function svd(a, n_components){
   tensor_V = tf.tensor(output_svd['V']).slice([0,0],[-1,n_components])
   return tf.matMul(tensor_U, tensor_V)
 }
+function nnmf(arr, n_components){
+  a = tf.tensor(arr)
+  var var_H = tf.randomNormal([n_components,a.shape[1]])
+  var var_W = tf.randomNormal([a.shape[0],n_components])
+  var_H = tf.variable(var_H,trainable=true)
+  var_W = tf.variable(var_W,trainable=true)
+  var f = () => var_W.matMul(var_H);
+  var cost = (pred, label) => tf.square(tf.sub(label,pred)).mean();
+  var optimizer = tf.train.adam(1);
+  for (var i = 0; i < 100; i++) {
+    cost(f(), a).print()
+    optimizer.minimize(() => cost(f(), a));
+  }
+  return tf_nj_list(var_W)
+}
 function metrics(a){
   a = tf.tensor(a)
   squared = tf.square(tf.sub(a,a.mean(0))).sum(0)
@@ -214,9 +229,13 @@ function plot_graph(data,with_acc=true){
 function plot_joyplot(x_outside,div,title,btm_gap=0.1, top_gap=0.25, gap=0.1,ratio=1.0){
   concat_x = [], concat_y = []
   for (var out = 0; out < x_outside.length; out++) {
-    out_hist = histogram(x_outside[out],100)
-    new_x = out_hist['x']
-    new_y = out_hist['y']
+    num_bins = Math.ceil(Math.sqrt(x_outside[out].length));
+    bins = d3.layout.histogram().frequency(false).bins(num_bins)(x_outside[out])
+    new_x = [], new_y = []
+    for(var i = 0; i < bins.length;i++){
+      new_x.push((bins[i]['dx']/2)+bins[i]['x'])
+      new_y.push(bins[i]['y'])
+    }
 
     if(out == 0){
       for (var i = 0;i < new_y.length;i++) {
@@ -307,7 +326,21 @@ function plot_joyplot(x_outside,div,title,btm_gap=0.1, top_gap=0.25, gap=0.1,rat
   }
   Plotly.newPlot(div, data_joyplot, layout);
 }
-function histogram(arr,bins=30,norm=true,jitter=0.001){
+function kernelDensityEstimator(kernel, x) {
+  return function(sample) {
+    return x.map(function(x) {
+		return [x, d3.mean(sample, function(v) { return kernel(x - v); })];
+    });
+  };
+}
+function epanechnikovKernel(bandwith) {
+  return function(u) {
+	if(Math.abs(u = u /  bandwith) <= 1) {
+	 return 0.75 * (1 - u * u) / bandwith;
+	} else return 0;
+  };
+}
+function histogram(arr,bins=30,norm=true,density=false,jitter=0.001){
   var max_arr = Math.max(...arr)
   var min_arr = Math.min(...arr)
   var arr_bins = []
@@ -331,8 +364,9 @@ function histogram(arr,bins=30,norm=true,jitter=0.001){
   function getSum(total, num) {
     return total + num;
   }
-  sum_hist = hist.reduce(getSum)
-  if(norm) for(var b = 0; b < arr_bins.length;b++) hist[b] /= sum_hist
+  //sum_hist = hist.reduce(getSum)
+  if(norm) for(var b = 0; b < arr_bins.length;b++) hist[b] /= arr.length
+  if(density) for(var b = 0; b < arr_bins.length;b++) hist[b] /= (arr.length*bins)
   return {'y':hist,'x':x_arange}
 }
 function plot_regression(data){
@@ -369,4 +403,80 @@ function plot_regression(data){
     }
   }
   Plotly.newPlot(data['div'], data_map, layout);
+}
+function plot_compare_distribution(data_arr, labels, colors, div){
+  data_plot = []
+  for(var outer = 0; outer < data_arr.length;outer++){
+    data = data_arr[outer]
+    data_y = []
+    for(var i = 0; i < data.length;i++)data_y.push(labels[outer])
+    max_arr = Math.max(...data)
+    min_arr = Math.min(...data)
+    num_bins = Math.ceil(Math.sqrt(data.length));
+    kde = kernelDensityEstimator(epanechnikovKernel(max_arr/50), arange(min_arr,max_arr,(max_arr-min_arr)/num_bins))
+    kde = kde(data)
+    bar_x = [], bar_y = []
+    for(var i = 0; i < kde.length;i++){
+      bar_x.push(kde[i][0])
+      bar_y.push(kde[i][1])
+    }
+    min_line_y = Math.min(...bar_y)
+    for(var i = 0; i < bar_y.length;i++) bar_y[i] -= min_line_y
+    kde = kernelDensityEstimator(epanechnikovKernel(max_arr/7), arange(min_arr,max_arr,(max_arr-min_arr)/128))
+    kde = kde(data)
+    line_x = [], line_y = []
+    for(var i = 0; i < kde.length;i++){
+      line_x.push(kde[i][0])
+      line_y.push(kde[i][1])
+    }
+    min_line_y = Math.min(...line_y)
+    for(var i = 0; i < line_y.length;i++) line_y[i] -= min_line_y
+    data_plot.push({
+      opacity:0.7,
+      legendgroup:labels[outer],
+      autobinx:false,
+      name:labels[outer],
+      yaxis:'y1',
+      xaxis:'x1',
+      marker:{
+        color:colors[outer]
+      },
+      type:'bar',
+      x:bar_x,
+      y:bar_y
+    })
+    data_plot.push({
+      showlegend:false,
+      legendgroup:labels[outer],
+      name: labels[outer],
+      yaxis:'y1',
+      xaxis:'x1',
+      marker:{
+        color:colors[outer]
+      },
+      mode:'lines',
+      type:'scatter',
+      x:line_x,
+      y:line_y
+    })
+    data_plot.push({
+      showlegend:false,
+      legendgroup:labels[outer],
+      name:labels[outer],
+      yaxis:'y2',
+      xaxis:'x1',
+      marker:{
+        color:colors[outer],
+        symbol:'line-ns-open'
+      },
+      mode:'markers',
+      x:data,
+      y:data_y,
+      type:'scatter',
+      text:null
+    })
+  }
+  layout_plot={"yaxis1": {"position": 0.0, "domain": [0.1, 1], "anchor": "free"}, "title": "Distplot with Normal Distribution", "xaxis1": {"zeroline": false, "domain": [0.0, 1.0], "anchor": "y2"},
+  "barmode": "overlay", "yaxis2": {"domain": [0, 0.10], "showticklabels": false, "anchor": "x1", "dtick": 1}, "hovermode": "closest", "legend": {"traceorder": "reversed"}}
+  Plotly.newPlot(div, data_plot,layout_plot);
 }

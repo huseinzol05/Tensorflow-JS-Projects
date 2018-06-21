@@ -1,0 +1,15 @@
+<html>
+<div id="div" style="height: 800px;"></div>
+<script src="../js/tf.js"></script>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/numeric-1.2.6.min.js"></script>
+<script src="../js/science.v1.min.js"></script>
+<script src="../js/d3.v3.min.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/plotly-latest.min.js"></script>
+<script>
+data_random=tf_nj_list(tf.randomNormal([2, 200]))
+plot_compare_distribution(data_random,['random 1','random 2'],['red','green'],'div')
+</script>
+</html>
