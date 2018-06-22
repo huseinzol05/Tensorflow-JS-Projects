@@ -1,0 +1,36 @@
+<html>
+<div id="text">
+</div>
+<script src="../js/tf.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+setTimeout(function(){
+  const cells = [
+    tf.layers.lstmCell({units: 64})
+  ];
+  const rnn = tf.layers.rnn({cell: cells, returnSequences: true,returnState:true});
+  const dense_layer1 = tf.layers.dense({units: 10, activation: 'linear'});
+  function f(x,states){
+    forward = rnn.apply(x,{initialState:states});
+    last_sequences = forward[0].slice([0,forward[0].shape[1]-1,0],[-1,1,-1]).reshape([-1,forward[0].shape[2]])
+    return {'forward':dense_layer1.apply(last_sequences),'states1':forward[1],'states2':forward[2]}
+  }
+  const cost = (label, pred) => tf.losses.softmaxCrossEntropy(label, pred).mean();
+  const accuracy = (label, pred) => tf.cast(tf.equal(label.argMax(1),pred.argMax(1)),'float32').mean();
+  const learning_rate = 0.001;
+  const optimizer = tf.train.adam(learning_rate);
+  batch_x = tf.randomNormal([1,10,10]);
+  batch_y = tf.randomNormal([1,10]);
+  batch_state = tf.zeros([1,64]);
+  feed = f(batch_x,[batch_state,batch_state])
+  optimizer.minimize(() => cost(batch_y,f(batch_x,[batch_state,batch_state])['forward']));
+  console.log('feed 1')
+  feed1 = f(batch_x,[feed['states1'],feed['states2']])
+  optimizer.minimize(() => cost(batch_y,f(batch_x,[feed1['states1'],feed1['states2']])['forward']));
+  console.log('feed 2')
+}, 5);
+
+</script>
+</html>

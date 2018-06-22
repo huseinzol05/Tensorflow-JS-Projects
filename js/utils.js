@@ -121,6 +121,16 @@ function minmax_scaling(a){
   a = tf.tensor(a)
   return tf.div(tf.sub(a,a.min(0)), tf.sub(a.max(0),a.min(0)))
 }
+function minmax_1d(a){
+  a = tf.tensor(a)
+  a_min = tf_str_tolist(a.min())
+  a_max = tf_str_tolist(a.max())
+  scaled = tf.div(tf.sub(a,a.min()), tf.sub(a.max(),a.min()))
+  return {'scaled':scaled,'min':a_min,'max':a_max}
+}
+function reverse_minmax_1d(a, a_min, a_max){
+  return tf.add(tf.mul(a, tf.scalar(a_max-a_min)), tf.scalar(a_min))
+}
 function one_hot(label_encoder){
   var onehot = nj.zeros([label_encoder['encode'].length,label_encoder['unique'].length]).tolist();
   for(var i = 0; i < label_encoder['encode'].length;i++) onehot[i][label_encoder['encode'][i]] = 1

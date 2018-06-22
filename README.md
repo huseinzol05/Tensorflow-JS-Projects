@@ -7,13 +7,16 @@ Web projects using Tensorflow JS, Plotly, D3, Echarts, NumJS, and NumericJS
 3. Linear, Polynomial, Ridge, Lasso and Elasticnet Regression
 
 ## Incoming models
-1. Realtime stock forecasting
-2. Realtime sentiment analysis
+1. Realtime sentiment analysis
+2. Realtime char generator
 
 ## How to run
 1. Just click any .html and wait the output, thats all!
 
 ## Output
+
+#### Stock forecasting
+![alt text](screenshot/stock-prediction.png)
 
 #### MNIST with layers histogram, mnist/feed-forward-mnist-histogram.html
 ![alt text](screenshot/mnist-histogram.png)
