@@ -5,6 +5,7 @@ Web projects using Tensorflow JS, Plotly, D3, Echarts, NumJS, and NumericJS
 1. Tensorboard-like histogram visualization on MNIST
 2. Decision boundaries for IRIS using PCA and SVD
 3. Linear, Polynomial, Ridge, Lasso and Elasticnet Regression
+4. Stock forecasting with distribution study
 
 ## Incoming models
 1. Realtime sentiment analysis
