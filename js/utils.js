@@ -1,3 +1,19 @@
+function dropout_lstm(cell,a,h,c,dropout_input=1.0,dropout_output=1.0){
+  var outputs = []
+  dropout_layer_input = tf.layers.dropout({rate:dropout_input})
+  dropout_layer_output = tf.layers.dropout({rate:dropout_output})
+  for(var i = 0; i < a.shape[1];i++){
+    var start = a.slice([0,i,0],[-1,1,-1]).reshape([-1,a.shape[2]])
+    if(dropout_input< 1) start = dropout_layer_input.apply(start)
+    applied=cell.apply([start,h,c])
+    if(dropout_output<1) applied[0] = dropout_layer_output.apply(applied[0])
+    outputs.push(applied[0].reshape([-1,1,applied[1].shape[1]]))
+    h = applied[1]
+    c = applied[2]
+  }
+  return [tf.concat(outputs,1),h,c]
+}
+
 function sleep(ms) {
   return new Promise(resolve => setTimeout(resolve, ms));
 }

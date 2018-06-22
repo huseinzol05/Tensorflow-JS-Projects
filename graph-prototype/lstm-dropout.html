@@ -1,0 +1,21 @@
+<html>
+<div id="text">
+</div>
+<script src="../js/tf.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/utils.js"></script>
+<script>
+
+batch_x = tf.randomNormal([1,10,10]);
+batch_y = tf.randomNormal([1,10]);
+batch_state = tf.zeros([1,64]);
+cell = tf.layers.lstmCell({units: 64})
+try{cell.apply(batch_x)}
+catch(err){}
+out=dropout_lstm(cell,batch_x,batch_state,batch_state,1.0,0.7)
+batch_x = tf.randomNormal([1,2,10]);
+out1=dropout_lstm(cell,batch_x,out[1],out[2],1.0,0.7)
+
+</script>
+</html>

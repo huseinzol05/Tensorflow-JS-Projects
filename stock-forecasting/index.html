@@ -26,8 +26,7 @@
     <label class="active">Size layer</label>
   </div>
   <div class="input-field col s12 m2">
-    <input id="numlayer" type="number" class="validate" placeholder="Eg: 1">
-    <label class="active">Number of layers</label>
+    <button id="suggestbutton" class="waves-effect waves-light btn blue lighten-2">Suggest me value!</button>
   </div>
 </div>
 <div class="row center">
@@ -50,16 +49,12 @@
     <input id="epoch" type="number" class="validate" placeholder="Eg: 10">
     <label class="active">Training Iteration</label>
   </div>
-  <div class="col s12 m2">
-    <div class="row">
-      <button id="suggestbutton" class="waves-effect waves-light btn blue lighten-2">Suggest me value!</button>
-    </div>
-    <div class="row">
-      <button id="trainbutton" class="waves-effect waves-light btn red lighten-2">Train & Simulate</button>
-    </div>
+  <div class="input-field col s12 m2">
+    <button id="trainbutton" class="waves-effect waves-light btn red lighten-2">Train & Simulate</button>
   </div>
 </div>
-<h6 class='header center light'>WARNING, Tensorflow JS not yet implemented Dropout for RNN, this model not able to forecast future values</h6>
+</div>
+<h6 class='header center light'>WARNING, Do not use this website to buy real stock!</h6>
 <div class="row">
   <div class="col s12 m8">
     <div class="row">
@@ -94,115 +89,116 @@ $('#suggestbutton').click(function(){
   $('#learningrate').val(0.01)
   $('#dropoutrate').val(0.5)
   $('#timestamp').val(5)
-  $('#sizelayer').val(64)
-  $('#numlayer').val(1)
+  $('#sizelayer').val(128)
   $('#initialmoney').val(10000)
   $('#maxbuy').val(5)
   $('#maxsell').val(10)
   $('#epoch').val(10)
 })
-minmax_scaled = minmax_1d(GOOG.close)
 $('#suggestbutton').click()
-cells = []; for(var i = 0; i < parseInt($('#numlayer').val());i++) cells.push(tf.layers.lstmCell({units: parseInt($('#sizelayer').val())}));
-rnn = tf.layers.rnn({cell: cells, returnSequences: true,returnState:true});
-dense_layer = tf.layers.dense({units: 1, activation: 'linear'});
-dropout_layer = tf.layers.dropout({rate:parseInt($('#dropoutrate').val())})
-function f(x,states){
-  forward = rnn.apply(x,{initialState:states});
-  last_sequences = forward[0].reshape([parseInt($('#timestamp').val()),parseInt($('#sizelayer').val())])
-  return {'forward':dense_layer.apply(dropout_layer.apply(last_sequences)),'states_1':forward[1],'states_2':forward[2]}
-}
-cost = (label, pred) => tf.square(tf.sub(label,pred)).mean();
-optimizer = tf.train.adam(parseFloat($('#learningrate').val()));
-timestamp = parseInt($('#timestamp').val())
-epoch = parseInt($('#epoch').val())
-X_scaled = minmax_scaled.scaled.slice([0],[Math.floor(minmax_scaled.scaled.shape[0]/timestamp)*timestamp+1])
-batch_states = [tf.zeros([1,64]),tf.zeros([1,64])];
-future = 0
-arr_loss = [], arr_layer = []
-function async_training_loop(callback) {
-  (function loop(i) {
-    var total_loss = 0
-    for(var k = 0; k < Math.floor(X_scaled.shape[0]/timestamp)*timestamp; k+=timestamp){
-      batch_x = X_scaled.slice([k],[timestamp]).reshape([1,-1,1])
-      batch_y = X_scaled.slice([k+1],[timestamp]).reshape([-1,1])
-      feed = f(batch_x,batch_states)
-      optimizer.minimize(() => cost(batch_y,f(batch_x,batch_states)['forward']));
-      batch_states = [feed.states_1,feed.states_2]
-      total_loss += parseFloat(cost(batch_y,f(batch_x,batch_states)['forward']).toString().slice(7));
-    }
-    total_loss /= Math.floor(X_scaled.shape[0]/timestamp);
-    arr_loss.push(total_loss)
-    output_predict = nj.zeros([X_scaled.shape[0]+future, 1])
-    output_predict.slice([0,1],null).assign(tf_str_tolist(X_scaled.slice(0,1))[0],false)
-    upper_b = Math.floor(X_scaled.shape[0]/timestamp)*timestamp
-    distance_upper_b = X_scaled.shape[0] - upper_b
-    batch_states = [tf.zeros([1,64]),tf.zeros([1,64])];
-    for(var k = 0; k < (Math.floor(X_scaled.shape[0]/timestamp)*timestamp)-timestamp; k+=timestamp){
-      batch_x = X_scaled.slice([k],[timestamp]).reshape([1,-1,1])
+$('#trainbutton').click(function(){
+  minmax_scaled = minmax_1d(GOOG.close)
+  timestamp = parseInt($('#timestamp').val())
+  epoch = parseInt($('#epoch').val())
+  future = 10
+  X_scaled = minmax_scaled.scaled.slice([0],[Math.floor(minmax_scaled.scaled.shape[0]/timestamp)*timestamp+1])
+  cell = tf.layers.lstmCell({units: parseInt($('#sizelayer').val())})
+  try{cell.apply(X_scaled.slice([0],[timestamp]).reshape([1,-1,1]))}
+  catch(err){}
+  dense_layer = tf.layers.dense({units: 1, activation: 'linear'});
+  function f(x,states){
+    forward = dropout_lstm(cell,x,states[0],states[1],1.0,parseFloat($('#dropoutrate').val()))
+    last_sequences = forward[0].reshape([x.shape[1],parseInt($('#sizelayer').val())])
+    return {'forward':dense_layer.apply(last_sequences),'states_1':forward[1],'states_2':forward[2]}
+  }
+  cost = (label, pred) => tf.square(tf.sub(label,pred)).mean();
+  optimizer = tf.train.adam(parseFloat($('#learningrate').val()));
+  batch_states = [tf.zeros([1,parseInt($('#sizelayer').val())]),tf.zeros([1,parseInt($('#sizelayer').val())])];
+  arr_loss = [], arr_layer = []
+  function async_training_loop(callback) {
+    (function loop(i) {
+      var total_loss = 0
+      for(var k = 0; k < Math.floor(X_scaled.shape[0]/timestamp)*timestamp; k+=timestamp){
+        batch_x = X_scaled.slice([k],[timestamp]).reshape([1,-1,1])
+        batch_y = X_scaled.slice([k+1],[timestamp]).reshape([-1,1])
+        feed = f(batch_x,batch_states)
+        optimizer.minimize(() => cost(batch_y,f(batch_x,batch_states)['forward']));
+        batch_states = [feed.states_1,feed.states_2]
+        total_loss += parseFloat(cost(batch_y,f(batch_x,batch_states)['forward']).toString().slice(7));
+      }
+      total_loss /= Math.floor(X_scaled.shape[0]/timestamp);
+      arr_loss.push(total_loss)
+      output_predict = nj.zeros([X_scaled.shape[0]+future, 1])
+      output_predict.slice([0,1],null).assign(tf_str_tolist(X_scaled.slice(0,1))[0],false)
+      upper_b = Math.floor(X_scaled.shape[0]/timestamp)*timestamp
+      distance_upper_b = X_scaled.shape[0] - upper_b
+      batch_states = [tf.zeros([1,parseInt($('#sizelayer').val())]),tf.zeros([1,parseInt($('#sizelayer').val())])];
+      for(var k = 0; k < (Math.floor(X_scaled.shape[0]/timestamp)*timestamp); k+=timestamp){
+        batch_x = X_scaled.slice([k],[timestamp]).reshape([1,-1,1])
+        feed = f(batch_x,batch_states)
+        batch_states = [feed.states_1,feed.states_2]
+        state_forward = tf_nj_list(feed.forward)
+        output_predict.slice([k+1,k+1+timestamp],null).assign(state_forward,false)
+      }
+      batch_x = X_scaled.slice([upper_b],[distance_upper_b]).reshape([1,-1,1])
       feed = f(batch_x,batch_states)
       batch_states = [feed.states_1,feed.states_2]
       state_forward = tf_nj_list(feed.forward)
-      output_predict.slice([k+1,k+1+timestamp],null).assign(state_forward,false)
-    }
-    batch_x = X_scaled.slice([k],[timestamp]).reshape([1,-1,1])
-    feed = f(batch_x,batch_states)
-    batch_states = [feed.states_1,feed.states_2]
-    state_forward = tf_nj_list(feed.forward)
-    output_predict.slice([k+1,k+1+timestamp],null).assign(state_forward,false)
-    pointer = k+1+timestamp
-    tensor_output_predict = tf.tensor(output_predict.tolist())
-    for(var k = 0; k < future-1; k+=1){
-      batch_x = tensor_output_predict.slice([pointer-timestamp],[timestamp]).reshape([1,-1,1])
-      feed = f(batch_x,batch_states)
-      batch_states = [feed.states_1,feed.states_2]
-      state_forward = tf_nj_list(feed.forward.transpose())
-      output_predict.slice([pointer,pointer+1],null).assign(state_forward[0][4],false)
-      pointer += 1
-    }
-    predicted_val = tf_nj_list_flatten(reverse_minmax_1d(tf.tensor(output_predict.reshape([-1]).tolist()),minmax_scaled['min'],minmax_scaled['max']))
-    var data = [
-      {
-        y:predicted_val,
-        type: 'scatter',
-        name: 'predicted google stock',
-        line: {
-          color: 'blue',
-        }
-      },
-      {
-        y:GOOG.close,
-        type: 'scatter',
-        name: 'real google stock',
-        ine: {
-          color: 'orange',
-        }
+      output_predict.slice([upper_b+1,X_scaled.shape[0]+1],null).assign(state_forward,false)
+      pointer = X_scaled.shape[0]+1
+      tensor_output_predict = tf.tensor(output_predict.tolist())
+      for(var k = 0; k < future-1; k+=1){
+        batch_x = tensor_output_predict.slice([pointer-timestamp],[timestamp]).reshape([1,-1,1])
+        feed = f(batch_x,batch_states)
+        batch_states = [feed.states_1,feed.states_2]
+        state_forward = tf_nj_list(feed.forward.transpose())
+        output_predict.slice([pointer,pointer+1],null).assign(state_forward[0][4],false)
+        pointer += 1
       }
-    ];
-    Plotly.newPlot('div_output', data,{
-      'title': 'GOOGLE Stock Market',
-      xaxis: {
-        autotick: true
-      },
-      margin: {
-        b: 25,
-        pad: 4,
-        l:25
+      predicted_val = tf_nj_list_flatten(reverse_minmax_1d(tf.tensor(output_predict.reshape([-1]).tolist()),minmax_scaled['min'],minmax_scaled['max']))
+      var data = [
+        {
+          y:predicted_val,
+          type: 'scatter',
+          name: 'predicted google stock',
+          line: {
+            color: 'blue',
+          }
+        },
+        {
+          y:GOOG.close,
+          type: 'scatter',
+          name: 'real google stock',
+          ine: {
+            color: 'orange',
+          }
+        }
+      ];
+      Plotly.newPlot('div_output', data,{
+        'title': 'GOOGLE Stock Market',
+        xaxis: {
+          autotick: true
+        },
+        margin: {
+          b: 25,
+          pad: 4,
+          l:25
+        }
+      });
+      plot_compare_distribution([GOOG.close,predicted_val],['real stock','predicted stock'],['orange','blue'],'div_dist')
+      flatten_layer = tf_nj_list_flatten(cell.kernel.val.flatten())
+      arr_layer.push(flatten_layer)
+      plot_joyplot(arr_layer,"div_layer",'first LSTM cells histogram')
+      plot_graph({'epoch':arange(0,arr_loss.length,1),'accuracy':[],'loss':arr_loss},false)
+      if (i < (epoch-1)) {
+        setTimeout(function() {loop(++i)}, 1000);
+      } else {
+        callback();
       }
-    });
-    plot_compare_distribution([GOOG.close,predicted_val],['real stock','predicted stock'],['orange','blue'],'div_dist')
-    flatten_layer = tf_nj_list_flatten(rnn.cell.cells[0].kernel.val.flatten())
-    arr_layer.push(flatten_layer)
-    plot_joyplot(arr_layer,"div_layer",'first LSTM cells histogram')
-    plot_graph({'epoch':arange(0,arr_loss.length,1),'accuracy':[],'loss':arr_loss},false)
-    if (i < (epoch-1)) {
-      setTimeout(function() {loop(++i)}, 2000);
-    } else {
-      callback();
-    }
-  }(0));
-}
-async_training_loop(function() {
-  $('#log').append('Done training!');
-});
+    }(0));
+  }
+  async_training_loop(function() {
+    $('#log').append('Done training!');
+  });
+})
 </script>
