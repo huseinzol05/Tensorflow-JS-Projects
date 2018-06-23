@@ -1,12 +1,17 @@
+function dropout_nn(x,keep_prob){
+  uniform = tf.randomUniform(x.shape)
+  added = tf.add(tf.scalar(keep_prob),uniform)
+  binary = tf.floor(added)
+  return tf.mul(tf.div(x,tf.scalar(keep_prob)),binary)
+}
+
 function dropout_lstm(cell,a,h,c,dropout_input=1.0,dropout_output=1.0){
   var outputs = []
-  dropout_layer_input = tf.layers.dropout({rate:dropout_input})
-  dropout_layer_output = tf.layers.dropout({rate:dropout_output})
   for(var i = 0; i < a.shape[1];i++){
     var start = a.slice([0,i,0],[-1,1,-1]).reshape([-1,a.shape[2]])
-    if(dropout_input< 1) start = dropout_layer_input.apply(start)
+    if(dropout_input< 1) start = dropout_nn(start,dropout_input)
     applied=cell.apply([start,h,c])
-    if(dropout_output<1) applied[0] = dropout_layer_output.apply(applied[0])
+    if(dropout_output<1) applied[0] = dropout_nn(applied[0],dropout_output)
     outputs.push(applied[0].reshape([-1,1,applied[1].shape[1]]))
     h = applied[1]
     c = applied[2]
@@ -502,7 +507,74 @@ function plot_compare_distribution(data_arr, labels, colors, div){
       text:null
     })
   }
-  layout_plot={"yaxis1": {"position": 0.0, "domain": [0.1, 1], "anchor": "free"}, "title": "Distplot with Normal Distribution", "xaxis1": {"zeroline": false, "domain": [0.0, 1.0], "anchor": "y2"},
+  layout_plot={"yaxis1": {"position": 0.0, "domain": [0.1, 1], "anchor": "free"}, "title": "Distribution plot", "xaxis1": {"zeroline": false, "domain": [0.0, 1.0], "anchor": "y2"},
   "barmode": "overlay", "yaxis2": {"domain": [0, 0.10], "showticklabels": false, "anchor": "x1", "dtick": 1}, "hovermode": "closest", "legend": {"traceorder": "reversed"}}
   Plotly.newPlot(div, data_plot,layout_plot);
+}
+function simple_investor(real_signal,predicted_signal,delay,initial_money,max_buy,max_sell){
+  outputs = []
+  current_decision = 0
+  current_val = predicted_signal[0]
+  states_sell_X = []
+  states_buy_X = []
+  states_sell_Y = []
+  states_buy_Y = []
+  current_inventory = 0
+  state=1
+  starting_money = initial_money
+  function buy(i,initial_money,current_inventory){
+    shares = Math.floor(initial_money / real_signal[i])
+    if(shares < 1) outputs.push('day '+i+': total balances '+initial_money+', not enough money to buy a unit price '+real_signal[i])
+    else{
+      if(shares>max_buy)buy_units=max_buy
+      else buy_units=shares
+      initial_money -= buy_units*real_signal[i]
+      current_inventory += buy_units
+      outputs.push('day '+i+': buy '+buy_units+' units at price '+buy_units*real_signal[i]+', total balance '+initial_money)
+      states_buy_X.push(i)
+      states_buy_Y.push(real_signal[i])
+    }
+    return [initial_money,current_inventory]
+  }
+  if(state==1){
+    bought = buy(0, initial_money, current_inventory)
+    initial_money = bought[0]
+    current_inventory = bought[1]
+  }
+  for(var i = 1;i<real_signal.length;i++){
+    if(predicted_signal[i] < current_val && state == 0){
+      if(current_decision < delay) current_decision++;
+      else{
+        state = 1
+        bought = buy(i, initial_money, current_inventory)
+        initial_money = bought[0]
+        current_inventory = bought[1]
+        current_decision = 0
+      }
+    }
+    if(predicted_signal[i] > current_val && state == 1){
+      if(current_decision < delay) current_decision++;
+      else{
+        state = 0
+        if(current_inventory == 0)outputs.push('day '+i+': cannot sell anything, inventory 0')
+        else{
+          if(current_inventory > max_sell)sell_units = max_sell;
+          else sell_units = current_inventory;
+          current_inventory -= sell_units
+          total_sell = sell_units * real_signal[i]
+          initial_money += total_sell
+          try {invest = ((real_signal[i] - real_signal[states_buy_X[states_buy_X.length-1]]) / real_signal[states_buy_X[states_buy_X.length-1]]) * 100}
+          catch(err) {invest = 0}
+          outputs.push('day '+i+': sell '+sell_units+' units at price '+total_sell+', investment '+invest+' %, total balance '+initial_money)
+        }
+        current_decision = 0
+        states_sell_X.push(i)
+        states_sell_Y.push(real_signal[i])
+      }
+    }
+    current_val = predicted_signal[i]
+  }
+  invest = ((initial_money - starting_money) / starting_money) * 100
+  return {'overall gain':(initial_money-starting_money),'overall investment':invest,
+  'sell_Y':states_sell_Y,'sell_X':states_sell_X,'buy_Y':states_buy_Y,'buy_X':states_buy_X,'output':outputs}
 }
