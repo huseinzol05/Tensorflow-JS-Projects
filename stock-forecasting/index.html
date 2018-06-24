@@ -5,7 +5,7 @@
   <link href="../css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
   <style>
   .row .col.m1 {
-    width:11%;
+    width:9.6%;
   }
   </style>
 </head>
@@ -37,6 +37,10 @@
   <div class="input-field col s12 m1">
     <input id="epoch" type="number" class="validate" placeholder="Eg: 10">
     <label class="active">Training Iteration</label>
+  </div>
+  <div class="input-field col s12 m1">
+    <input id="future" type="number" class="validate" placeholder="Eg: 10">
+    <label class="active">Future days to forecast</label>
   </div>
   <div class="input-field col s12 m2">
     <button id="suggestbutton" class="waves-effect waves-light btn blue lighten-2">Suggest me value!</button>
@@ -133,6 +137,7 @@ $('#suggestbutton').click(function(){
   $('#maxsell').val(10)
   $('#epoch').val(10)
   $('#history').val(4)
+  $('#future').val(30)
 })
 $('#suggestbutton').click()
 $('#trainbutton').click(function(){
@@ -148,7 +153,7 @@ $('#trainbutton').click(function(){
     minmax_scaled = minmax_1d(GOOG.close)
     timestamp = parseInt($('#timestamp').val())
     epoch = parseInt($('#epoch').val())
-    future = 10
+    future = parseInt($('#future').val())
     X_scaled = minmax_scaled.scaled.slice([0],[Math.floor(minmax_scaled.scaled.shape[0]/timestamp)*timestamp+1])
     cells = [tf.layers.lstmCell({units: parseInt($('#sizelayer').val())})];
     rnn = tf.layers.rnn({cell: cells, returnSequences: true,returnState:true});
@@ -206,9 +211,19 @@ $('#trainbutton').click(function(){
         $('#log').append('Epoch: '+(i+1)+', avg loss: '+total_loss+'<br>');
         predicted_val = tf_nj_list_flatten(reverse_minmax_1d(tf.tensor(tensor_output_predict),minmax_scaled['min'],minmax_scaled['max']))
         $('#div_output').attr('style','height:450px;');
+        new_date = GOOG.date.slice()
+        for(var k = 0; k < future; k+=1){
+          somedate = new Date(new_date[new_date.length-1])
+          somedate.setDate(somedate.getDate() + 1)
+          dd = somedate.getDate()
+          mm = somedate.getMonth() + 1
+          y = somedate.getFullYear()
+          new_date.push(y.toString()+'-'+mm.toString()+'-'+dd.toString())
+        }
         var data = [
           {
             y:predicted_val,
+            x:new_date,
             type: 'scatter',
             name: 'predicted google stock',
             line: {
@@ -217,6 +232,7 @@ $('#trainbutton').click(function(){
           },
           {
             y:GOOG.close,
+            x:GOOG.date,
             type: 'scatter',
             name: 'real google stock',
             ine: {
@@ -250,12 +266,13 @@ $('#trainbutton').click(function(){
     async_training_loop(function() {
       $('#log').append('Done training!');
       my_investment = simple_investor(GOOG.close,predicted_val,parseInt($('#history').val()),
-      parseFloat($('#initialmoney').val()),parseInt($('#maxbuy').val()),parseInt($('#maxsell').val()))
+      parseFloat($('#initialmoney').val()),parseInt($('#maxbuy').val()),parseInt($('#maxsell').val()),GOOG.date)
       for(var i = 0; i < my_investment['output'].length; i++) $('#log-invest').append("<h6 class='header light'>"+my_investment['output'][i]+'</h6>');
       $('#log-invest').append("<h5 class='header light'>Overall gain: "+my_investment['overall gain']+", Overall investment: "+my_investment['overall investment']+"%</h5>")
       var data = [
         {
           y:predicted_val,
+          x:new_date,
           type: 'scatter',
           name: 'predicted google stock',
           line: {
@@ -264,6 +281,7 @@ $('#trainbutton').click(function(){
         },
         {
           y:GOOG.close,
+          x:GOOG.date,
           type: 'scatter',
           name: 'real google stock',
           line: {

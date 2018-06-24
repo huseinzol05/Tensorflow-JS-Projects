@@ -511,12 +511,13 @@ function plot_compare_distribution(data_arr, labels, colors, div){
   "barmode": "overlay", "yaxis2": {"domain": [0, 0.10], "showticklabels": false, "anchor": "x1", "dtick": 1}, "hovermode": "closest", "legend": {"traceorder": "reversed"}}
   Plotly.newPlot(div, data_plot,layout_plot);
 }
-function simple_investor(real_signal,predicted_signal,delay,initial_money,max_buy,max_sell){
+function simple_investor(real_signal,predicted_signal,delay,initial_money,max_buy,max_sell,dates){
   outputs = []
   current_decision = 0
   current_val = predicted_signal[0]
   states_sell_X = []
   states_buy_X = []
+  states_buy_index = []
   states_sell_Y = []
   states_buy_Y = []
   current_inventory = 0
@@ -530,8 +531,9 @@ function simple_investor(real_signal,predicted_signal,delay,initial_money,max_bu
       else buy_units=shares
       initial_money -= buy_units*real_signal[i]
       current_inventory += buy_units
-      outputs.push('day '+i+': buy '+buy_units+' units at price '+buy_units*real_signal[i]+', total balance '+initial_money)
-      states_buy_X.push(i)
+      outputs.push(dates[i]+': buy '+buy_units+' units at price '+buy_units*real_signal[i]+', total balance '+initial_money)
+      states_buy_X.push(dates[i])
+      states_buy_index.push(i)
       states_buy_Y.push(real_signal[i])
     }
     return [initial_money,current_inventory]
@@ -556,19 +558,19 @@ function simple_investor(real_signal,predicted_signal,delay,initial_money,max_bu
       if(current_decision < delay) current_decision++;
       else{
         state = 0
-        if(current_inventory == 0)outputs.push('day '+i+': cannot sell anything, inventory 0')
+        if(current_inventory == 0)outputs.push(dates[i]+': cannot sell anything, inventory 0')
         else{
           if(current_inventory > max_sell)sell_units = max_sell;
           else sell_units = current_inventory;
           current_inventory -= sell_units
           total_sell = sell_units * real_signal[i]
           initial_money += total_sell
-          try {invest = ((real_signal[i] - real_signal[states_buy_X[states_buy_X.length-1]]) / real_signal[states_buy_X[states_buy_X.length-1]]) * 100}
+          try {invest = ((real_signal[i] - real_signal[states_buy_index[states_buy_index.length-1]]) / real_signal[states_buy_index[states_buy_index.length-1]]) * 100}
           catch(err) {invest = 0}
-          outputs.push('day '+i+': sell '+sell_units+' units at price '+total_sell+', investment '+invest+' %, total balance '+initial_money)
+          outputs.push(dates[i]+': sell '+sell_units+' units at price '+total_sell+', investment '+invest+' %, total balance '+initial_money)
         }
         current_decision = 0
-        states_sell_X.push(i)
+        states_sell_X.push(dates[i])
         states_sell_Y.push(real_signal[i])
       }
     }
