@@ -1,0 +1,124 @@
+<html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+  <link href="../css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <link href="../css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
+  <style>
+  body {
+    background-color: #E6E6E8
+  }
+</style>
+</head>
+<div style="padding-left:10px;padding-right:10px">
+  <div class="row">
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content" style="height:600px;">
+          <div id="div_heatmap_sale" style="height: 550px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content" style="height:600px;">
+          <div id="div_heatmap_share" style="height: 550px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col s12 m4">
+      <div class="card">
+        <div class="card-content" style="height:900px;">
+          <div id="div_line" style="height: 850px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m8">
+      <div class="card">
+        <div class="card-content" style="height:900px;">
+          <div id="div_scatter" style="height: 850px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content" style="height:700px;">
+          <div id="div_correlation" style="height: 650px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content" style="height:700px;">
+          <div id="div_4_axis" style="height: 650px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content" style="height:700px;">
+          <div class="row">
+            <div id="div_polynomial" style="height: 550px;"></div>
+          </div>
+          <div class="row center">
+            <div class="input-field col s12 m3 offset-m2">
+              <input id="polynomial-k" type="number" placeholder="Eg: 3" max="30" min="1"class="validate valid" value="3">
+              <label class="active">Polynomial K</label>
+            </div>
+            <div class="input-field col s12 m3">
+              <input id="future" type="number" placeholder="Eg: 3" max="10" min="1" class="validate valid" value="3">
+              <label class="active">Future count</label>
+            </div>
+            <div class="input-field col s12 m2">
+              <button id="trainbutton" class="waves-effect waves-light btn red lighten-2">Fit</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content" style="height:700px;">
+          <div id="div_pie" style="height: 650px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="row">
+    <div class="col s12 m12">
+      <div class="card">
+        <div class="card-content" style="height:700px;overflow:auto">
+          <table class="highlight">
+            <thead>
+              <tr id="table-header">
+              </tr>
+            </thead>
+            <tbody id="table-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="../js/tf.js"></script>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/materialize.min.js"></script>
+<script src="../js/d3.v3.min.js"></script>
+<script src="../js/numeric-1.2.6.min.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/echarts.min.js"></script>
+<script src="../js/echarts-gl.min.js"></script>
+<script src="../data/export.js"> </script>
+<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts-stat/ecStat.min.js"></script>
+<script src="graph.js"> </script>
+</html>

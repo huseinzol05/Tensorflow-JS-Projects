@@ -6,6 +6,7 @@ Web projects using Tensorflow JS, Plotly, D3, Echarts, NumJS, and NumericJS
 2. Decision boundaries for IRIS using PCA and SVD
 3. Linear, Polynomial, Ridge, Lasso and Elasticnet Regression
 4. Stock forecasting and investment simulation with distribution study
+5. Malaysia Export products forecasting
 
 ## Incoming models
 1. Realtime sentiment analysis
@@ -15,6 +16,9 @@ Web projects using Tensorflow JS, Plotly, D3, Echarts, NumJS, and NumericJS
 1. Just click any .html and wait the output, thats all!
 
 ## Output
+
+#### Malaysia Export products forecasting
+![alt text](screenshot/matrade.png)
 
 #### Stock forecasting
 ![alt text](screenshot/stock1.png)
