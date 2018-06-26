@@ -1019,7 +1019,7 @@ function create_table(){
       nested += "<td>"+EXPORT['Y'][k][i].toFixed(3)+"</td>"
     }
     for(var k = 0; k < to_list[i].length;k++){
-      nested += "<td>"+to_list[i][k].toFixed(3)+"</td>"
+      nested += "<td class='red-text'>"+to_list[i][k].toFixed(3)+"</td>"
     }
     nested += "</br>";
     body += nested
