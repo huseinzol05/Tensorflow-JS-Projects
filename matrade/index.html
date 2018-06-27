@@ -11,6 +11,60 @@
   }
 </style>
 </head>
+<div class="loadingscreen" style="display:block">
+    <div class="card card-loading">
+      <div class="card-image card-image-loading">
+        <div style="text-align:center;">
+          <div class="preloader-wrapper big active">
+            <div class="spinner-layer spinner-blue">
+              <div class="circle-clipper left">
+                <div class="circle"></div>
+              </div><div class="gap-patch">
+                <div class="circle"></div>
+              </div><div class="circle-clipper right">
+                <div class="circle"></div>
+              </div>
+            </div>
+
+            <div class="spinner-layer spinner-red">
+              <div class="circle-clipper left">
+                <div class="circle"></div>
+              </div><div class="gap-patch">
+                <div class="circle"></div>
+              </div><div class="circle-clipper right">
+                <div class="circle"></div>
+              </div>
+            </div>
+
+            <div class="spinner-layer spinner-yellow">
+              <div class="circle-clipper left">
+                <div class="circle"></div>
+              </div><div class="gap-patch">
+                <div class="circle"></div>
+              </div><div class="circle-clipper right">
+                <div class="circle"></div>
+              </div>
+            </div>
+
+            <div class="spinner-layer spinner-green">
+              <div class="circle-clipper left">
+                <div class="circle"></div>
+              </div><div class="gap-patch">
+                <div class="circle"></div>
+              </div><div class="circle-clipper right">
+                <div class="circle"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card-content">
+        <div style="text-align:center;">
+          <p id="paracsv">Training Neural Network</p>
+        </div>
+      </div>
+    </div>
+  </div>
 <div style="padding-left:10px;padding-right:10px">
   <div class="row">
     <div class="col s12 m6">
@@ -107,6 +161,22 @@
       </div>
     </div>
   </div>
+  <div class="row">
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content" style="height:700px;">
+          <div id="div_map" style="height: 650px;"></div>
+        </div>
+      </div>
+    </div>
+    <div class="col s12 m6">
+      <div class="card">
+        <div class="card-content" style="height:700px;">
+          <div id="div_map_pie" style="height: 650px;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script src="../js/tf.js"></script>
@@ -119,6 +189,8 @@
 <script src="../js/echarts.min.js"></script>
 <script src="../js/echarts-gl.min.js"></script>
 <script src="../data/export.js"> </script>
+<script src="../data/export-map.js"> </script>
 <script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts-stat/ecStat.min.js"></script>
+<script type="text/javascript" src="http://echarts.baidu.com/gallery/vendors/echarts/map/js/world.js"></script>
 <script src="graph.js"> </script>
 </html>
