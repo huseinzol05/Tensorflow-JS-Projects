@@ -7,6 +7,9 @@
   .row .col.m1 {
     width:9.6%;
   }
+  .close-first{
+    display: none;
+  }
   </style>
 </head>
 <br>
@@ -76,11 +79,11 @@
     <div class="row">
       <div id="div_output" style="height: 450px;"></div>
     </div>
-    <div class="row">
+    <div class="row close-first">
       <div id="div_dist" style="height: 450px;"></div>
     </div>
   </div>
-  <div class="col s12 m4">
+  <div class="col s12 m4 close-first">
     <div class="row">
       <div id="div_layer" style="height: 350px;"></div>
     </div>
@@ -91,8 +94,28 @@
     </div>
   </div>
 </div>
-<div class="row" style="padding-left:50px;padding-right:50px" id='log-invest'>
-
+<div class="row" style="padding-left:50px;padding-right:50px">
+  <ul class="collapsible" data-collapsible="accordion">
+    <li>
+      <div class="collapsible-header"><i class="material-icons">archive</i>Simulation log</div>
+      <div class="collapsible-body"><span>
+        <table class="bordered highlight">
+        <thead>
+          <tr>
+              <th>Date</th>
+              <th>Action</th>
+              <th>Price</th>
+              <th>Investment</th>
+              <th>Balance</th>
+          </tr>
+        </thead>
+        <tbody id='table-body'>
+        </tbody>
+      </table><br>
+      <span id="log-invest"></span>
+      </span></div>
+    </li>
+  </ul>
 </div>
 <script src="../js/tf.js"></script>
 <script src="../js/jquery-3.3.1.min.js"></script>
@@ -141,6 +164,7 @@ $('#suggestbutton').click(function(){
 })
 $('#suggestbutton').click()
 $('#trainbutton').click(function(){
+  $('.close-first').css('display','block');
   if(parseFloat($('#inputdropoutrate').val())<0 || parseFloat($('#inputdropoutrate').val())>1){
     Materialize.toast('input dropout must bigger than 0 and less than 1', 4000)
     return
@@ -267,8 +291,9 @@ $('#trainbutton').click(function(){
       $('#log').append('Done training!');
       my_investment = simple_investor(GOOG.close,predicted_val,parseInt($('#history').val()),
       parseFloat($('#initialmoney').val()),parseInt($('#maxbuy').val()),parseInt($('#maxsell').val()),GOOG.date)
-      for(var i = 0; i < my_investment['output'].length; i++) $('#log-invest').append("<h6 class='header light'>"+my_investment['output'][i]+'</h6>');
-      $('#log-invest').append("<h5 class='header light'>Overall gain: "+my_investment['overall gain']+", Overall investment: "+my_investment['overall investment']+"%</h5>")
+      $('#table-body').html('');
+      for(var i = 0; i < my_investment['output'].length; i++) $('#table-body').append(my_investment['output'][i]);
+      $('#log-invest').append("<h6 class='header'>Overall gain: "+my_investment['overall gain']+", Overall investment: "+my_investment['overall investment']+"%</h5>")
       var data = [
         {
           y:predicted_val,
