@@ -21,7 +21,7 @@ Web projects using Tensorflow JS, Plotly, D3, Echarts, NumJS, and NumericJS
 ![alt text](screenshot/matrade.png)
 
 #### Stock forecasting
-![alt text](screenshot/stock1.png)
+![alt text](screenshot/stock3.png)
 
 #### MNIST with layers histogram, mnist/feed-forward-mnist-histogram.html
 ![alt text](screenshot/mnist-histogram.png)
