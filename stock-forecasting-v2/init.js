@@ -1204,7 +1204,7 @@ function plot_pairplot(val){
     });
     titles.push({
       textAlign: 'center',
-      text: val['movement_changes'][i]['title']+' '+(val['pct_changes'][i]*100).toFixed(2)+'%',
+      text: val['movement_changes'][i]['title']+' '+(val['pct_changes'][i]).toFixed(2)+'%',
       textStyle: {
         fontSize: 12,
         fontWeight: 'normal'
