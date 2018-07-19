@@ -74,13 +74,13 @@
   </div>
 </div>
 <h6 class='header center light'>WARNING, This website may hang during training, and do not use this website to buy real stock!</h6>
-<div class="row">
+<div class="row" style="padding-left:10px;padding-right:10px">
   <div class="col s12 m12">
     <div id="div_output" style="height: 500px;"></div>
   </div>
 </div>
 <br>
-<div class="row close-first">
+<div class="row close-first" style="padding-left:10px;padding-right:10px">
   <div class="col s12 m8">
     <div id="div_dist" style="height: 450px;"></div>
   </div>
@@ -92,28 +92,44 @@
     </div>
   </div>
 </div>
-<div class="row" style="padding-left:50px;padding-right:50px">
+<div class="row" style="padding-left:10px;padding-right:10px">
   <ul class="collapsible" data-collapsible="accordion">
     <li>
       <div class="collapsible-header"><i class="material-icons">archive</i>Simulation log</div>
       <div class="collapsible-body"><span>
         <table class="bordered highlight">
-        <thead>
-          <tr>
+          <thead>
+            <tr>
               <th>Date</th>
               <th>Action</th>
               <th>Price</th>
               <th>Investment</th>
               <th>Balance</th>
-          </tr>
-        </thead>
-        <tbody id='table-body'>
-        </tbody>
-      </table><br>
-      <span id="log-invest"></span>
+            </tr>
+          </thead>
+          <tbody id='table-body'>
+          </tbody>
+        </table><br>
+        <span id="log-invest"></span>
       </span></div>
     </li>
   </ul>
+</div>
+<div id="after-hell" style="display:none">
+  <div class="row" style="padding-left:10px;padding-right:10px">
+    <div class="col s12 m6">
+      <div id="pi_correlation" style="height:500px"></div>
+    </div>
+    <div class="col s12 m6">
+      <div id="div_pie" style="height:500px"></div>
+    </div>
+  </div>
+  <div class="row" style="padding-left:10px;padding-right:10px">
+    <div id="percent_changes" style="height:600px"></div>
+  </div>
+  <div class="row" style="padding-left:10px;padding-right:10px">
+    <div id="pairplot" style="height:700px"></div>
+  </div>
 </div>
 <script src="../js/tf.js"></script>
 <script src="../js/jquery-3.3.1.min.js"></script>

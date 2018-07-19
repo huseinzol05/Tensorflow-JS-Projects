@@ -887,7 +887,359 @@ $('#trainbutton').click(function(){
 
       var chart_stock = echarts.init(document.getElementById('div_output'));
       chart_stock.setOption(option,true);
+      $('#after-hell').css('display','block');
+      formData = new FormData();
+      formData.append("date", JSON.stringify(GOOGLE.date));
+      formData.append("close", JSON.stringify(close));
+      formData.append("rolling", 4);
+
+      xmlhttp = new XMLHttpRequest();
+      xmlhttp.onreadystatechange = function() {
+        if (xmlhttp.readyState == 4 && xmlhttp.status == 200) {
+          try{
+            data = JSON.parse(this.responseText);
+            plot_pairplot(data)
+          }
+          catch(err){
+            return;
+          }
+          if(data['error']){
+
+          }
+          else{
+          }
+        }
+      };
+      xmlhttp.open("POST", "http://huseinhouse.com:8070/uploader", true);
+      xmlhttp.send(formData);
 
     });
   }, 500);
 })
+
+function plot_pairplot(val){
+  var chart = echarts.init(document.getElementById('pairplot'));
+  var columns = ['Close','Crude Oil','Diesel', 'Gasoline', 'Gold', 'Heating Oil', 'Kerosene', 'Natural Gas', 'Propane'];
+
+  var grids = [];
+  var xAxes = [];
+  var yAxes = [];
+  var series = [];
+  var titles = [];
+  var count = 0;
+  for(var k = 8; k >= 0;k--){
+    grids.push({
+      show: false,
+      borderWidth: 0,
+      backgroundColor: '#fff',
+      shadowColor: 'rgba(0, 0, 0, 0.3)',
+      shadowBlur: 2
+    });
+    if(k%9==0){
+      xAxes.push({
+        type: 'category',
+        name:'sell',
+        show:true,
+        data: val['pairplot'][k][0][0],
+        gridIndex: count
+      })
+      xAxes.push({
+        type: 'category',
+        name:'buy',
+        show:false,
+        data: val['pairplot'][k][1][0],
+        gridIndex: count
+      })
+      yAxes.push({
+        type: 'value',
+        show:true,
+        gridIndex: count
+      })
+      series.push({
+        data: val['pairplot'][k][0][1],
+        name:'sell',
+        type: 'bar',
+        xAxisIndex: count,
+        yAxisIndex: count,
+      })
+      series.push({
+        data: val['pairplot'][k][1][1],
+        name:'buy',
+        type: 'bar',
+        xAxisIndex: count,
+        yAxisIndex: count,
+      })
+      titles.push({
+        textAlign: 'center',
+        text: columns[k]+' histogram',
+        textStyle: {
+          fontSize: 12,
+          fontWeight: 'normal'
+        }
+      })
+    }
+    else{
+      titles.push({
+        textAlign: 'center',
+        text: columns[0]+' vs '+columns[k],
+        textStyle: {
+          fontSize: 12,
+          fontWeight: 'normal'
+        }
+      })
+      xAxes.push({
+        type: 'value',
+        gridIndex: count,
+        show: true,
+        min:'dataMin',
+        max:'dataMax'
+      })
+      yAxes.push({
+        type: 'value',
+        show: true,
+        gridIndex: count,
+        min:'dataMin',
+        max:'dataMax'
+      })
+      series.push({
+        data: val['pairplot'][k][0][0].map(function(el, idx) {
+          return [el,val['pairplot'][k][0][1][idx]];
+        }),
+        type: 'scatter',
+        name:'sell',
+        xAxisIndex: count,
+        yAxisIndex: count,
+      })
+      series.push({
+        data: val['pairplot'][k][1][0].map(function(el, idx) {
+          return [el,val['pairplot'][k][1][1][idx]];
+        }),
+        type: 'scatter',
+        name:'buy',
+        xAxisIndex: count,
+        yAxisIndex: count,
+      })
+    }
+    count++;
+  }
+
+  var rowNumber = Math.ceil(Math.sqrt(count));
+  echarts.util.each(grids, function (grid, idx) {
+    grid.left = ((idx % rowNumber) / rowNumber * 100 + 2) + '%';
+    grid.top = (Math.floor(idx / rowNumber) / rowNumber * 93 + 15) + '%';
+    grid.width = (1 / rowNumber * 100 - 5) + '%';
+    grid.height = (1 / rowNumber * 90 -11) + '%';
+
+    titles[idx].left = parseFloat(grid.left) + parseFloat(grid.width) / 2 + '%';
+    titles[idx].top = (parseFloat(grid.top)-5) + '%';
+  });
+
+  option = {
+    color:['#c23531', '#61a0a8'],
+    legend: {
+      data:['sell','buy'],
+      top:'5%'
+    },
+    title: titles.concat([{
+      text: 'Pairplot Study',
+      top: 'top',
+      left: 'center'
+    }]),
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        animation: false
+      }
+    },
+    grid: grids,
+    xAxis: xAxes,
+    yAxis: yAxes,
+    series: series
+  };
+  chart.setOption(option)
+
+
+  var chart_pi = echarts.init(document.getElementById('pi_correlation'));
+  var seriesData = [];
+  var selected = {};
+  for(var i = 0; i < val['pi'].length;i++){
+    seriesData.push({'name':columns[i+1],'value':val['pi'][i]})
+    selected[columns[i+1]]=true
+  }
+  option = {
+    title : {
+      text: 'Correlation Piechart',
+      x:'center'
+    },
+    tooltip : {
+      trigger: 'item',
+      formatter: "{a} <br/>{b} : {c} ({d}%)"
+    },
+    legend: {
+      type: 'scroll',
+      orient: 'vertical',
+      right: 10,
+      top: 20,
+      bottom: 20,
+      data: columns.slice(1),
+      selected: selected
+    },
+    series : [
+      {
+        name: 'correlation',
+        type: 'pie',
+        radius : '55%',
+        center: ['40%', '50%'],
+        data: seriesData,
+        itemStyle: {
+          emphasis: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        }
+      }
+    ]
+  };
+  chart_pi.setOption(option)
+
+  option = {
+    legend: {},
+    tooltip: {
+      trigger: 'axis',
+      showContent: false
+    },
+    dataset: {
+      source: val['data_stack']
+    },
+    xAxis: {type: 'category'},
+    yAxis: {gridIndex: 0},
+    grid: {top: '60%'},
+    series: [
+      {type: 'line', smooth: true, seriesLayoutBy: 'row'},
+      {type: 'line', smooth: true, seriesLayoutBy: 'row'},
+      {type: 'line', smooth: true, seriesLayoutBy: 'row'},
+      {type: 'line', smooth: true, seriesLayoutBy: 'row'},
+      {
+        type: 'pie',
+        id: 'pie',
+        radius: '30%',
+        center: ['50%', '35%'],
+        label: {
+          formatter: '{b}: {@2017-07-31} ({d}%)'
+        },
+        encode: {
+          itemName: 'data',
+          value: '2017-07-31',
+          tooltip: '2017-07-31'
+        }
+      }
+    ]
+  };
+  var chart_pie = echarts.init(document.getElementById('div_pie'));
+  chart_pie.on('updateAxisPointer', function (event) {
+    var xAxisInfo = event.axesInfo[0];
+    if (xAxisInfo) {
+      var dimension = xAxisInfo.value + 1;
+      chart_pie.setOption({
+        series: {
+          id: 'pie',
+          label: {
+            formatter: '{b}: {@[' + dimension + ']} ({d}%)'
+          },
+          encode: {
+            value: dimension,
+            tooltip: dimension
+          }
+        }
+      });
+    }
+  });
+  chart_pie.setOption(option);
+
+  var grids = [];
+  var xAxes = [];
+  var yAxes = [];
+  var series = [];
+  var titles = [];
+  var count = 0;
+  for(var i = 0; i < val['movement_changes'].length; i++){
+    var data = [];
+    for (var k = 0; k < val['movement_changes'][i]['movement'].length; k++) {
+      data.push([k,val['movement_changes'][i]['movement'][k]])
+    }
+    grids.push({
+      show: true,
+      borderWidth: 0,
+      backgroundColor: '#fff',
+      shadowColor: 'rgba(0, 0, 0, 0.3)',
+      shadowBlur: 2
+    });
+    xAxes.push({
+      type: 'value',
+      show: false,
+      min:'dataMin',
+      max:'dataMax',
+      gridIndex: count
+    });
+    yAxes.push({
+      type: 'value',
+      show: false,
+      min:'dataMin',
+      max:'dataMax',
+      gridIndex: count
+    });
+    if(val['pct_changes'][i] < 0) color_graph = 'red';
+    else color_graph = 'green';
+    series.push({
+      type: 'line',
+      xAxisIndex: count,
+      yAxisIndex: count,
+      data: data,
+      itemStyle:{
+        color:color_graph
+      },
+      showSymbol: false,
+      animationDuration: 1000
+    });
+    titles.push({
+      textAlign: 'center',
+      text: val['movement_changes'][i]['title']+' '+(val['pct_changes'][i]*100).toFixed(2)+'%',
+      textStyle: {
+        fontSize: 12,
+        fontWeight: 'normal'
+      }
+    });
+    count++;
+  }
+  var rowNumber = Math.ceil(Math.sqrt(count));
+  echarts.util.each(grids, function (grid, idx) {
+    grid.left = ((idx % rowNumber) / rowNumber * 100 + 0.5) + '%';
+    grid.top = (Math.floor(idx / rowNumber) / rowNumber * 120 + 10) + '%';
+    grid.width = (1 / rowNumber * 100 - 1) + '%';
+    grid.height = (1 / rowNumber * 120 - 1) + '%';
+
+    titles[idx].left = parseFloat(grid.left) + parseFloat(grid.width) / 2 + '%';
+    titles[idx].top = parseFloat(grid.top) + '%';
+  });
+
+  option = {
+    title: titles.concat([{
+      text: 'Weekly % changes',
+      top: 'top',
+      left: 'center'
+    }]),
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        animation: false
+      }
+    },
+    grid: grids,
+    xAxis: xAxes,
+    yAxis: yAxes,
+    series: series
+  };
+  var chart_changes = echarts.init(document.getElementById('percent_changes'));
+  chart_changes.setOption(option)
+}
