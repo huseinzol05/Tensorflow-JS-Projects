@@ -524,17 +524,21 @@ function simple_investor(real_signal,predicted_signal,delay,initial_money,max_bu
   state=1
   starting_money = initial_money
   function buy(i,initial_money,current_inventory){
-    shares = Math.floor(initial_money / real_signal[i])
+    if(i < real_signal.length) shares = Math.floor(initial_money / real_signal[i]);
+    else shares = Math.floor(initial_money / predicted_signal[i])
     if(shares < 1){} //outputs.push('day '+i+': total balances '+initial_money+', not enough money to buy a unit price '+real_signal[i])
     else{
       if(shares>max_buy)buy_units=max_buy
       else buy_units=shares
-      initial_money -= buy_units*real_signal[i]
+      if(i < real_signal.length) gains = buy_units*real_signal[i]
+      else gains = buy_units*predicted_signal[i]
+      initial_money -= gains
       current_inventory += buy_units
-      outputs.push("<tr><td>"+dates[i]+"</td><td>buy "+buy_units+" units</td><td>"+buy_units*real_signal[i]+"</td><td>NULL</td><td>"+initial_money+"</td></tr>")
+      outputs.push("<tr><td>"+dates[i]+"</td><td>buy "+buy_units+" units</td><td>"+gains+"</td><td>NULL</td><td>"+initial_money+"</td></tr>")
       states_buy_X.push(dates[i])
       states_buy_index.push(i)
-      states_buy_Y.push(real_signal[i])
+      if(i < real_signal.length) states_buy_Y.push(real_signal[i]);
+      else states_buy_Y.push(predicted_signal[i]);
     }
     return [initial_money,current_inventory]
   }
@@ -543,8 +547,8 @@ function simple_investor(real_signal,predicted_signal,delay,initial_money,max_bu
     initial_money = bought[0]
     current_inventory = bought[1]
   }
-  for(var i = 1;i<real_signal.length;i++){
-    if(predicted_signal[i] < current_val && state == 0){
+  for(var i = 1;i<predicted_signal.length;i++){
+    if(predicted_signal[i] < current_val && state == 0 && (predicted_signal.length-i) > delay){
       if(current_decision < delay) current_decision++;
       else{
         state = 1
@@ -554,7 +558,7 @@ function simple_investor(real_signal,predicted_signal,delay,initial_money,max_bu
         current_decision = 0
       }
     }
-    if(predicted_signal[i] > current_val && state == 1){
+    if((predicted_signal[i] > current_val && state == 1)||((predicted_signal.length-i) < delay) && state == 1){
       if(current_decision < delay) current_decision++;
       else{
         state = 0
@@ -563,15 +567,20 @@ function simple_investor(real_signal,predicted_signal,delay,initial_money,max_bu
           if(current_inventory > max_sell)sell_units = max_sell;
           else sell_units = current_inventory;
           current_inventory -= sell_units
-          total_sell = sell_units * real_signal[i]
+          if(i < real_signal.length) total_sell = sell_units * real_signal[i]
+          else total_sell = sell_units * predicted_signal[i]
           initial_money += total_sell
-          try {invest = ((real_signal[i] - real_signal[states_buy_index[states_buy_index.length-1]]) / real_signal[states_buy_index[states_buy_index.length-1]]) * 100}
+          try {
+            if(i < real_signal.length) invest = ((real_signal[i] - real_signal[states_buy_index[states_buy_index.length-1]]) / real_signal[states_buy_index[states_buy_index.length-1]]) * 100
+            else invest = ((predicted_signal[i] - predicted_signal[states_buy_index[states_buy_index.length-1]]) / predicted_signal[states_buy_index[states_buy_index.length-1]]) * 100
+          }
           catch(err) {invest = 0}
-          outputs.push("<tr><td>"+dates[i]+"</td><td>sell "+sell_units+" units</td><td>"+total_sell+"</td><td>"+invest+"</td><td>"+initial_money+"</td></tr>")
+          outputs.push("<tr><td>"+dates[i]+"</td><td>sell "+sell_units+" units</td><td>"+total_sell+"</td><td>"+invest+"%</td><td>"+initial_money+"</td></tr>")
         }
         current_decision = 0
         states_sell_X.push(dates[i])
-        states_sell_Y.push(real_signal[i])
+        if(i < real_signal.length) states_sell_Y.push(real_signal[i])
+        else states_sell_Y.push(predicted_signal[i])
       }
     }
     current_val = predicted_signal[i]

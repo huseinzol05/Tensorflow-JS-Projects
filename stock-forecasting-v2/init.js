@@ -3,6 +3,89 @@ var colors = ['#5793f3', '#d14a61', '#675bba','#b62f46'];
 var close = GOOGLE['data'].map(function(el, idx) {
   return el[1];
 })
+var stocks = GOOGLE['data'].map(function(el, idx) {
+  return [el[0],el[1],el[3],el[2]];
+})
+var stock_date = GOOGLE['date'];
+var volume = GOOGLE['volume'];
+var csv;
+var indeces = {};
+var dataMA5, dataMA10, dataMA20, dataMA30;
+var total_investment, total_gain, stock_changes, stock_changes_percent
+
+function generate_investment(strings,values){
+  colors = "";
+  for(var i = 0; i < strings.length;i++){
+    if(values[i]>=0) colors += "<div class='col s12 m2'><div class='card'><div class='card-content'><a class='btn-floating waves-effect waves-light green' style='width:100px;height:100px;margin-bottom:20px'><i class='material-icons' style='font-size:3rem; line-height:95px'>arrow_upward</i></a><p><h6>"+strings[i]+values[i]+"</h6></p></div></div></div>";
+    else colors += "<div class='col s12 m2'><div class='card'><div class='card-content'><a class='btn-floating waves-effect waves-light red' style='width:100px;height:100px;margin-bottom:20px'><i class='material-icons' style='font-size:3rem; line-height:95px'>arrow_downward</i></a><p><h6>"+strings[i]+values[i]+"</h6></p></div></div></div>";
+  }
+  $('#color-investment').html(colors);
+}
+
+function buildConfig() {
+  return {
+    delimiter: $('#delimiter').val(),
+    header: $('#header').prop('checked'),
+    dynamicTyping: $('#dynamicTyping').prop('checked'),
+    skipEmptyLines: $('#skipEmptyLines').prop('checked'),
+    preview: parseInt($('#preview').val() || 0),
+    step: $('#stream').prop('checked') ? stepFn : undefined,
+    encoding: $('#encoding').val(),
+    worker: $('#worker').prop('checked'),
+    comments: $('#comments').val(),
+    complete: completeFn,
+    error: errorFn
+  }
+}
+
+function errorFn(err, file) {
+    Materialize.toast("ERROR: " + err + file,3000)
+}
+
+function completeFn(results) {
+  if (results && results.errors) {
+    if (results.errors) {
+      errorCount = results.errors.length;
+      firstError = results.errors[0]
+    }
+    if (results.data && results.data.length > 0)
+    rowCount = results.data.length
+  }
+  csv = results['data'];
+  for(var i = 0;i<csv[0].length;i++) indeces[csv[0][i].toLowerCase()] = i;
+  stocks = [];
+  volume = [];
+  stock_date = [];
+  for(var i = 1;i<csv.length;i++){
+    if(!isNaN(csv[i][indeces['open']]) && !isNaN(csv[i][indeces['close']]) && !isNaN(csv[i][indeces['low']]) && !isNaN(csv[i][indeces['high']]) && !isNaN(csv[i][indeces['volume']])){
+      stocks.push([parseFloat(csv[i][indeces['open']]),
+      parseFloat(csv[i][indeces['close']]),
+      parseFloat(csv[i][indeces['low']]),
+      parseFloat(csv[i][indeces['high']])]);
+      volume.push(csv[i][indeces['volume']]);
+      stock_date.push(csv[i][indeces['date']]);
+    }
+  }
+  close = stocks.map(function(el, idx) {
+    return el[1];
+  })
+  plot_stock();
+}
+
+var csv, config = buildConfig();
+$('#uploadcsv').change(function() {
+    csv = null;
+    file = document.getElementById('uploadcsv');
+    if ($(this).val().search('.csv') <= 0) {
+        $(this).val('');
+        Materialize.toast('Only support CSV', 4000);
+        return
+    }
+    $(this).parse({
+        config: config
+    })
+})
+
 function calculate_distribution(real,predict){
   data_plot = []
   data_arr = [real,predict]
@@ -79,222 +162,225 @@ function calculateMA(dayCount, data) {
   }
   return result;
 }
-var dataMA5 = calculateMA(5, GOOGLE['data']);
-var dataMA10 = calculateMA(10, GOOGLE['data']);
-var dataMA20 = calculateMA(20, GOOGLE['data']);
-var dataMA30 = calculateMA(30, GOOGLE['data']);
 
-option = {
-  animation: false,
-  color: color_list,
-  title: {
-    left: 'center'
-  },
-  legend: {
-    top: 30,
-    data: ['GOOGLE', 'MA5', 'MA10', 'MA20', 'MA30']
-  },
-  tooltip: {
-    trigger: 'axis',
-    position: function (pt) {
-      return [pt[0], '10%'];
-    }
-  },
-  axisPointer: {
-    link: [{
-      xAxisIndex: [0, 1]
-    }]
-  },
-  dataZoom: [{
-    type: 'slider',
-    xAxisIndex: [0, 1],
-    realtime: false,
-    start: 0,
-    end: 100,
-    top: 65,
-    height: 20,
-    handleIcon: 'M10.7,11.9H9.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4h1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
-    handleSize: '120%'
-  }, {
-    type: 'inside',
-    xAxisIndex: [0, 1],
-    start: 40,
-    end: 70,
-    top: 30,
-    height: 20
-  }],
-  xAxis: [{
-    type: 'category',
-    data: GOOGLE['date'],
-    boundaryGap : false,
-    axisLine: { lineStyle: { color: '#777' } },
-    axisLabel: {
-      formatter: function (value) {
-        return echarts.format.formatTime('MM-dd', value);
-      }
-    },
-    min: 'dataMin',
-    max: 'dataMax',
-    axisPointer: {
-      show: true
-    }
-  }, {
-    type: 'category',
-    gridIndex: 1,
-    data: GOOGLE['date'],
-    scale: true,
-    boundaryGap : false,
-    splitLine: {show: false},
-    axisLabel: {show: false},
-    axisTick: {show: false},
-    axisLine: { lineStyle: { color: '#777' } },
-    splitNumber: 20,
-    min: 'dataMin',
-    max: 'dataMax',
-    axisPointer: {
-      type: 'shadow',
-      label: {show: false},
-      triggerTooltip: true,
-      handle: {
-        show: true,
-        margin: 30,
-        color: '#B80C00'
-      }
-    }
-  }],
-  yAxis: [{
-    scale: true,
-    splitNumber: 2,
-    axisLine: { lineStyle: { color: '#777' } },
-    splitLine: { show: true },
-    axisTick: { show: false },
-    axisLabel: {
-      inside: true,
-      formatter: '{value}\n'
-    }
-  }, {
-    scale: true,
-    gridIndex: 1,
-    splitNumber: 2,
-    axisLabel: {show: false},
-    axisLine: {show: false},
-    axisTick: {show: false},
-    splitLine: {show: false}
-  }],
-  grid: [{
-    left: 20,
-    right: 30,
-    top: 110,
-  }, {
-    left: 20,
-    right: 30,
-    top: 400
-  }],
-  graphic: [{
-    type: 'group',
-    left: 'center',
-    top: 70,
-    width: 300,
-    bounding: 'raw',
-    children: [{
-      id: 'MA5',
-      type: 'text',
-      style: {fill: color_list[1]},
-      left: 0
-    }, {
-      id: 'MA10',
-      type: 'text',
-      style: {fill: color_list[2]},
+function plot_stock(){
+  dataMA5 = calculateMA(5, stocks);
+  dataMA10 = calculateMA(10, stocks);
+  dataMA20 = calculateMA(20, stocks);
+  dataMA30 = calculateMA(30, stocks);
+  option = {
+    animation: false,
+    color: color_list,
+    title: {
       left: 'center'
-    }, {
-      id: 'MA20',
-      type: 'text',
-      style: {fill: color_list[3]},
-      right: 0
-    }]
-  }],
-  series: [{
-    name: 'Volume',
-    type: 'bar',
-    xAxisIndex: 1,
-    yAxisIndex: 1,
-    itemStyle: {
-      normal: {
-        color: '#7fbe9e'
-      },
-      emphasis: {
-        color: '#140'
+    },
+    legend: {
+      top: 30,
+      data: ['STOCK', 'MA5', 'MA10', 'MA20', 'MA30']
+    },
+    tooltip: {
+      trigger: 'axis',
+      position: function (pt) {
+        return [pt[0], '10%'];
       }
     },
-    data: GOOGLE['volume']
-  }, {
-    type: 'candlestick',
-    name: 'GOOGLE',
-    data: GOOGLE['data'],
-    itemStyle: {
-      normal: {
-        color: '#ef232a',
-        color0: '#14b143',
-        borderColor: '#ef232a',
-        borderColor0: '#14b143'
+    axisPointer: {
+      link: [{
+        xAxisIndex: [0, 1]
+      }]
+    },
+    dataZoom: [{
+      type: 'slider',
+      xAxisIndex: [0, 1],
+      realtime: false,
+      start: 0,
+      end: 100,
+      top: 65,
+      height: 20,
+      handleIcon: 'M10.7,11.9H9.3c-4.9,0.3-8.8,4.4-8.8,9.4c0,5,3.9,9.1,8.8,9.4h1.3c4.9-0.3,8.8-4.4,8.8-9.4C19.5,16.3,15.6,12.2,10.7,11.9z M13.3,24.4H6.7V23h6.6V24.4z M13.3,19.6H6.7v-1.4h6.6V19.6z',
+      handleSize: '120%'
+    }, {
+      type: 'inside',
+      xAxisIndex: [0, 1],
+      start: 40,
+      end: 70,
+      top: 30,
+      height: 20
+    }],
+    xAxis: [{
+      type: 'category',
+      data: stock_date,
+      boundaryGap : false,
+      axisLine: { lineStyle: { color: '#777' } },
+      axisLabel: {
+        formatter: function (value) {
+          return echarts.format.formatTime('MM-dd', value);
+        }
       },
-      emphasis: {
-        color: 'black',
-        color0: '#444',
-        borderColor: 'black',
-        borderColor0: '#444'
+      min: 'dataMin',
+      max: 'dataMax',
+      axisPointer: {
+        show: true
       }
-    }
-  }, {
-    name: 'MA5',
-    type: 'line',
-    data: dataMA5,
-    smooth: true,
-    showSymbol: false,
-    lineStyle: {
-      normal: {
-        width: 1
+    }, {
+      type: 'category',
+      gridIndex: 1,
+      data: stock_date,
+      scale: true,
+      boundaryGap : false,
+      splitLine: {show: false},
+      axisLabel: {show: false},
+      axisTick: {show: false},
+      axisLine: { lineStyle: { color: '#777' } },
+      splitNumber: 20,
+      min: 'dataMin',
+      max: 'dataMax',
+      axisPointer: {
+        type: 'shadow',
+        label: {show: false},
+        triggerTooltip: true,
+        handle: {
+          show: true,
+          margin: 30,
+          color: '#B80C00'
+        }
       }
-    }
-  }, {
-    name: 'MA10',
-    type: 'line',
-    data: dataMA10,
-    smooth: true,
-    showSymbol: false,
-    lineStyle: {
-      normal: {
-        width: 1
+    }],
+    yAxis: [{
+      scale: true,
+      splitNumber: 2,
+      axisLine: { lineStyle: { color: '#777' } },
+      splitLine: { show: true },
+      axisTick: { show: false },
+      axisLabel: {
+        inside: true,
+        formatter: '{value}\n'
       }
-    }
-  }, {
-    name: 'MA20',
-    type: 'line',
-    data: dataMA20,
-    smooth: true,
-    showSymbol: false,
-    lineStyle: {
-      normal: {
-        width: 1
+    }, {
+      scale: true,
+      gridIndex: 1,
+      splitNumber: 2,
+      axisLabel: {show: false},
+      axisLine: {show: false},
+      axisTick: {show: false},
+      splitLine: {show: false}
+    }],
+    grid: [{
+      left: 20,
+      right: 30,
+      top: 110,
+    }, {
+      left: 20,
+      right: 30,
+      top: 400
+    }],
+    graphic: [{
+      type: 'group',
+      left: 'center',
+      top: 70,
+      width: 300,
+      bounding: 'raw',
+      children: [{
+        id: 'MA5',
+        type: 'text',
+        style: {fill: color_list[1]},
+        left: 0
+      }, {
+        id: 'MA10',
+        type: 'text',
+        style: {fill: color_list[2]},
+        left: 'center'
+      }, {
+        id: 'MA20',
+        type: 'text',
+        style: {fill: color_list[3]},
+        right: 0
+      }]
+    }],
+    series: [{
+      name: 'Volume',
+      type: 'bar',
+      xAxisIndex: 1,
+      yAxisIndex: 1,
+      itemStyle: {
+        normal: {
+          color: '#7fbe9e'
+        },
+        emphasis: {
+          color: '#140'
+        }
+      },
+      data: volume
+    }, {
+      type: 'candlestick',
+      name: 'STOCK',
+      data: stocks,
+      itemStyle: {
+        normal: {
+          color: '#ef232a',
+          color0: '#14b143',
+          borderColor: '#ef232a',
+          borderColor0: '#14b143'
+        },
+        emphasis: {
+          color: 'black',
+          color0: '#444',
+          borderColor: 'black',
+          borderColor0: '#444'
+        }
       }
-    }
-  },
-  {
-    name: 'MA30',
-    type: 'line',
-    data: dataMA30,
-    smooth: true,
-    showSymbol: false,
-    lineStyle: {
-      normal: {
-        width: 1
+    }, {
+      name: 'MA5',
+      type: 'line',
+      data: dataMA5,
+      smooth: true,
+      showSymbol: false,
+      lineStyle: {
+        normal: {
+          width: 1
+        }
       }
-    }
-  }]
-};
+    }, {
+      name: 'MA10',
+      type: 'line',
+      data: dataMA10,
+      smooth: true,
+      showSymbol: false,
+      lineStyle: {
+        normal: {
+          width: 1
+        }
+      }
+    }, {
+      name: 'MA20',
+      type: 'line',
+      data: dataMA20,
+      smooth: true,
+      showSymbol: false,
+      lineStyle: {
+        normal: {
+          width: 1
+        }
+      }
+    },
+    {
+      name: 'MA30',
+      type: 'line',
+      data: dataMA30,
+      smooth: true,
+      showSymbol: false,
+      lineStyle: {
+        normal: {
+          width: 1
+        }
+      }
+    }]
+  };
 
-var chart_stock = echarts.init(document.getElementById('div_output'));
-chart_stock.setOption(option,true);
+  var chart_stock = echarts.init(document.getElementById('div_output'));
+  chart_stock.setOption(option,true);
+}
+plot_stock();
 
 $('#suggestbutton').click(function(){
   $('#learningrate').val(0.01)
@@ -311,6 +397,8 @@ $('#suggestbutton').click(function(){
 })
 $('#suggestbutton').click()
 $('#trainbutton').click(function(){
+  $('#log').html('');
+  $('#log-invest').html('');
   $('.close-first').css('display','block');
   if(parseFloat($('#inputdropoutrate').val())<0 || parseFloat($('#inputdropoutrate').val())>1){
     Materialize.toast('input dropout must bigger than 0 and less than 1', 4000)
@@ -321,7 +409,7 @@ $('#trainbutton').click(function(){
     return
   }
   setTimeout(function(){
-    minmax_scaled = minmax_1d(close)
+    minmax_scaled = minmax_1d(close);
     timestamp = parseInt($('#timestamp').val())
     epoch = parseInt($('#epoch').val())
     future = parseInt($('#future').val())
@@ -382,7 +470,7 @@ $('#trainbutton').click(function(){
         $('#log').append('Epoch: '+(i+1)+', avg loss: '+total_loss+'<br>');
         predicted_val = tf_nj_list_flatten(reverse_minmax_1d(tf.tensor(tensor_output_predict),minmax_scaled['min'],minmax_scaled['max']))
         $('#div_output').attr('style','height:450px;');
-        new_date = GOOGLE.date.slice()
+        new_date = stock_date.slice()
         for(var k = 0; k < future; k+=1){
           somedate = new Date(new_date[new_date.length-1])
           somedate.setDate(somedate.getDate() + 1)
@@ -400,7 +488,7 @@ $('#trainbutton').click(function(){
           },
           legend: {
             top: 30,
-            data: ['GOOGLE', 'MA5', 'MA10', 'MA20', 'MA30','predicted close']
+            data: ['STOCK', 'MA5', 'MA10', 'MA20', 'MA30','predicted close']
           },
           tooltip: {
             trigger: 'axis',
@@ -449,7 +537,7 @@ $('#trainbutton').click(function(){
           }, {
             type: 'category',
             gridIndex: 1,
-            data: GOOGLE['date'],
+            data: stock_date,
             scale: true,
             boundaryGap : false,
             splitLine: {show: false},
@@ -534,11 +622,11 @@ $('#trainbutton').click(function(){
                 color: '#140'
               }
             },
-            data: GOOGLE['volume']
+            data: volume
           }, {
             type: 'candlestick',
-            name: 'GOOGLE',
-            data: GOOGLE['data'],
+            name: 'STOCK',
+            data: stocks,
             itemStyle: {
               normal: {
                 color: '#ef232a',
@@ -647,10 +735,14 @@ $('#trainbutton').click(function(){
     async_training_loop(function() {
       $('#log').append('Done training!');
       my_investment = simple_investor(close,predicted_val,parseInt($('#history').val()),
-      parseFloat($('#initialmoney').val()),parseInt($('#maxbuy').val()),parseInt($('#maxsell').val()),GOOGLE.date)
+      parseFloat($('#initialmoney').val()),parseInt($('#maxbuy').val()),parseInt($('#maxsell').val()),new_date)
       $('#table-body').html('');
       for(var i = 0; i < my_investment['output'].length; i++) $('#table-body').append(my_investment['output'][i]);
       $('#log-invest').append("<h6 class='header'>Overall gain: "+my_investment['overall gain']+", Overall investment: "+my_investment['overall investment']+"%</h5>")
+      total_investment = my_investment['overall investment']
+      total_gain = my_investment['overall gain']
+      stock_changes = predicted_val[predicted_val.length-1] - close[0]
+      stock_changes_percent = (stock_changes / close[0])*100
 
       var markpoints = []
       for (var i = 0; i < my_investment['buy_X'].length;i++){
@@ -669,7 +761,7 @@ $('#trainbutton').click(function(){
         },
         legend: {
           top: 30,
-          data: ['GOOGLE', 'MA5', 'MA10', 'MA20', 'MA30','predicted close','sell','buy']
+          data: ['STOCK', 'MA5', 'MA10', 'MA20', 'MA30','predicted close','sell','buy']
         },
         tooltip: {
           trigger: 'axis',
@@ -718,7 +810,7 @@ $('#trainbutton').click(function(){
         }, {
           type: 'category',
           gridIndex: 1,
-          data: GOOGLE['date'],
+          data: stock_date,
           scale: true,
           boundaryGap : false,
           splitLine: {show: false},
@@ -803,11 +895,11 @@ $('#trainbutton').click(function(){
               color: '#140'
             }
           },
-          data: GOOGLE['volume']
+          data: volume
         }, {
           type: 'candlestick',
-          name: 'GOOGLE',
-          data: GOOGLE['data'],
+          name: 'STOCK',
+          data: stocks,
           markPoint: {
             data: markpoints
           },
@@ -889,9 +981,9 @@ $('#trainbutton').click(function(){
       chart_stock.setOption(option,true);
       $('#after-hell').css('display','block');
       formData = new FormData();
-      formData.append("date", JSON.stringify(GOOGLE.date));
+      formData.append("date", JSON.stringify(stock_date));
       formData.append("close", JSON.stringify(close));
-      formData.append("rolling", 4);
+      formData.append("rolling", $('#history').val());
 
       xmlhttp = new XMLHttpRequest();
       xmlhttp.onreadystatechange = function() {
@@ -901,10 +993,12 @@ $('#trainbutton').click(function(){
             plot_pairplot(data)
           }
           catch(err){
+            Materialize.toast("error, unable to do post-processing, please try with different data",3000);
             return;
           }
           if(data['error']){
-
+            Materialize.toast("error, unable to do post-processing, please try with different data",3000);
+            return;
           }
           else{
           }
@@ -1166,7 +1260,7 @@ function plot_pairplot(val){
   for(var i = 0; i < val['movement_changes'].length; i++){
     var data = [];
     for (var k = 0; k < val['movement_changes'][i]['movement'].length; k++) {
-      data.push([k,val['movement_changes'][i]['movement'][k]])
+      data.push([val['movement_changes'][i]['date'][k],val['movement_changes'][i]['movement'][k]])
     }
     grids.push({
       show: true,
@@ -1176,7 +1270,7 @@ function plot_pairplot(val){
       shadowBlur: 2
     });
     xAxes.push({
-      type: 'value',
+      type: 'category',
       show: false,
       min:'dataMin',
       max:'dataMax',
@@ -1242,4 +1336,7 @@ function plot_pairplot(val){
   };
   var chart_changes = echarts.init(document.getElementById('percent_changes'));
   chart_changes.setOption(option)
+  generate_investment(['total investment(%): ','total gains: ','stock changes: ','stock changes (%): ','gold changes(%): ','crude oil changes(%): '],
+[total_investment.toFixed(2)+'%', total_gain.toFixed(2), stock_changes.toFixed(2),
+  stock_changes_percent.toFixed(2),(val['gain_crude_oil']*100).toFixed(2),(val['gain_gold']*100).toFixed(2)])
 }
