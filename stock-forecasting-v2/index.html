@@ -4,9 +4,6 @@
   <link href="../css/materialize.min.css" type="text/css" rel="stylesheet" media="screen,projection"/>
   <link href="../css/style.css" type="text/css" rel="stylesheet" media="screen,projection"/>
   <style>
-  .row .col.m1 {
-    width:9.6%;
-  }
   .close-first{
     display: none;
   }
@@ -20,13 +17,13 @@
           <div class="col s3 m1">
             Settings
           </div>
-          <div class="input-field col s12 m1 right" style="margin-top:5px">
+          <div class="input-field col s12 m1 right" style="margin-top:5px; width:160px">
             <button id="trainbutton" class="waves-effect waves-light btn red lighten-2">Train</button>
           </div>
-          <div class="input-field col s12 m1 right" style="margin-top:5px">
+          <div class="input-field col s12 m1 right" style="margin-top:5px; width:160px">
             <button id="suggestbutton" class="waves-effect waves-light btn blue lighten-2">Suggest</button>
           </div>
-          <div class="file-field input-field col s12 m1 right" style="margin-top:5px">
+          <div class="file-field input-field col s12 m1 right" style="margin-top:5px; width:160px">
             <div class="btn blue lighten-2" style="height:36px; line-height:2.5rem">
               <span>Pick CSV</span>
               <input id="uploadcsv" type="file">
@@ -66,6 +63,10 @@
           <div class="input-field col s12 m1">
             <input id="future" type="number" class="validate" placeholder="Eg: 10">
             <label class="active">Future days to forecast</label>
+          </div>
+          <div class="input-field col s12 m1">
+            <input id="smooth" type="number" class="validate" placeholder="Eg: 10">
+            <label class="active">Smoothing weights</label>
           </div>
         </div>
         <div class="row center">

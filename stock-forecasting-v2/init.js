@@ -13,6 +13,17 @@ var indeces = {};
 var dataMA5, dataMA10, dataMA20, dataMA30;
 var total_investment, total_gain, stock_changes, stock_changes_percent
 
+function smoothing_line(scalars,weight){
+  last = scalars[0]
+  smoothed = []
+  for(var i = 0; i < scalars.length;i++){
+    smoothed_val = last * weight + (1 - weight) * scalars[i]
+    smoothed.push(smoothed_val)
+    last = smoothed_val
+  }
+  return smoothed
+}
+
 function generate_investment(strings,values){
   colors = "";
   for(var i = 0; i < strings.length;i++){
@@ -394,6 +405,7 @@ $('#suggestbutton').click(function(){
   $('#epoch').val(10)
   $('#history').val(4)
   $('#future').val(30)
+  $('#smooth').val(0.5)
 })
 $('#suggestbutton').click()
 $('#trainbutton').click(function(){
@@ -402,6 +414,10 @@ $('#trainbutton').click(function(){
   $('.close-first').css('display','block');
   if(parseFloat($('#inputdropoutrate').val())<0 || parseFloat($('#inputdropoutrate').val())>1){
     Materialize.toast('input dropout must bigger than 0 and less than 1', 4000)
+    return
+  }
+  if(parseFloat($('#smooth').val())<0 || parseFloat($('#smooth').val())>1){
+    Materialize.toast('smoothing weights must bigger than 0 and less than 1', 4000)
     return
   }
   if(parseFloat($('#outputdropoutrate').val())<0 || parseFloat($('#outputdropoutrate').val())>1){
@@ -469,6 +485,7 @@ $('#trainbutton').click(function(){
         }
         $('#log').append('Epoch: '+(i+1)+', avg loss: '+total_loss+'<br>');
         predicted_val = tf_nj_list_flatten(reverse_minmax_1d(tf.tensor(tensor_output_predict),minmax_scaled['min'],minmax_scaled['max']))
+        predicted_val = smoothing_line(predicted_val,parseFloat($('#smooth').val()))
         $('#div_output').attr('style','height:450px;');
         new_date = stock_date.slice()
         for(var k = 0; k < future; k+=1){
@@ -1337,6 +1354,6 @@ function plot_pairplot(val){
   var chart_changes = echarts.init(document.getElementById('percent_changes'));
   chart_changes.setOption(option)
   generate_investment(['total investment(%): ','total gains: ','stock changes: ','stock changes (%): ','gold changes(%): ','crude oil changes(%): '],
-[total_investment.toFixed(2)+'%', total_gain.toFixed(2), stock_changes.toFixed(2),
+[total_investment.toFixed(2), total_gain.toFixed(2), stock_changes.toFixed(2),
   stock_changes_percent.toFixed(2),(val['gain_crude_oil']*100).toFixed(2),(val['gain_gold']*100).toFixed(2)])
 }
