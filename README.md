@@ -7,6 +7,7 @@ Web projects using Tensorflow JS, Plotly, D3, Echarts, NumJS, and NumericJS
 3. Linear, Polynomial, Ridge, Lasso and Elasticnet Regression
 4. Stock forecasting and investment simulation with distribution study
 5. Malaysia Export products forecasting
+6. Trading Agent using Evolution Strategy
 
 ## Incoming models
 1. Realtime sentiment analysis

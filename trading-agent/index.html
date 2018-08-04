@@ -1,0 +1,155 @@
+<html>
+</html>
+<script src="../js/tf.js"></script>
+<script src="../js/jquery-3.3.1.min.js"></script>
+<script src="../js/materialize.min.js"></script>
+<script src="../js/d3.v3.min.js"></script>
+<script src="../js/numeric-1.2.6.min.js"></script>
+<script src="../js/numjs.min.js"></script>
+<script src="../js/utils.js"></script>
+<script src="../js/echarts.min.js"></script>
+<script src="../js/echarts-gl.min.js"></script>
+<script src="../js/papaparse.min.js"></script>
+<script src="../data/google.js"> </script>
+<script>
+var close = GOOGLE['data'].map(function(el, idx) {
+  return el[1];
+})
+window_size = 30
+skip = 1
+l = close.length - 1
+
+function NeuralNetwork(input_size, layer_size, output_size) {
+  this.weights = [tf.randomNormal([input_size,layer_size]),
+                  tf.randomNormal([layer_size,output_size]),
+                  tf.randomNormal([layer_size,1]),
+                  tf.randomNormal([1, layer_size])]
+
+  this.predict = function(inputs){
+    var feed = inputs.matMul(this.weights[0]).add(this.weights[3])
+    var decision = feed.matMul(this.weights[1])
+    var buy = feed.matMul(this.weights[2])
+    return {'decision':decision,'buy':buy}
+  }
+
+  this.get_weights = function(){
+    return this.weights
+  }
+}
+
+function Evolution_Strategy(weights, reward_function, population_size, sigma, learning_rate){
+  this.weights = weights
+  this.reward_function = reward_function
+  this.population_size = population_size
+  this.sigma = sigma
+  this.learning_rate = learning_rate
+
+  this.get_weight_population = function(weights, population){
+    var weights_population = []
+    for (var k = 0; k < population.length; k++){
+      var jittered = population[k].mul(tf.scalar(this.sigma))
+      weights_population.push(weights[k].add(jittered))
+    }
+    return weights_population
+  }
+
+  this.get_weights = function(){
+    return this.weights
+  }
+
+  this.train = function(epoch, checkpoint){
+    for(var i = 0; i < epoch; i++){
+      var population = []
+      var rewards = []
+      for(var k = 0; k < this.population_size; k++){
+        x = []
+        this.weights.forEach(function (element, index) {
+          x.push(tf.randomNormal(element.shape))
+        })
+        population.push(x)
+      }
+      for(var k = 0; k < this.population_size; k++){
+        var weights_population = this.get_weight_population(this.weights, population[k])
+        rewards.push(this.reward_function(weights_population))
+      }
+      rewards_tensor = tf.tensor(rewards)
+      moments_rewards = tf.moments(rewards_tensor)
+      rewards = rewards_tensor.sub(moments_rewards['mean']).div(moments_rewards['variance'].sqrt())
+      for(var k = 0; k < this.weights.length; k++){
+        populating = []
+        population.forEach(function (element_population) {
+          populating.push(element_population[k].expandDims(0))
+        })
+        populating = tf.concat(populating,0)
+        sigmatized = tf.scalar(this.learning_rate / (this.population_size * this.sigma))
+        transpose_populating = populating.transpose().reshape([-1,population.length]).matMul(rewards.reshape([-1,1])).reshape([populating.shape[2],populating.shape[1]]).transpose().mul(sigmatized)
+        this.weights[k] = this.weights[k].add(transpose_populating)
+      }
+      if((i+1)%checkpoint==0) console.log('epoch: '+(i+1)+', reward: '+(this.reward_function(this.weights)))
+    }
+  }
+}
+
+function get_state(array, t, n){
+  d = t - n + 1
+  if(d>=0) block = array.slice(d,t+1)
+  else block = Array(-d).fill(array[0]).concat(array.slice(0,t+1))
+  res = []
+  for(var i = 0; i < (n-1);i++) res.push(block[i+1]-block[i])
+  return [res]
+}
+
+function Agent(population_size, learning_rate, sigma, model, money, max_buy, max_sell){
+  this.population_size = population_size
+  this.learning_rate = learning_rate
+  this.sigma = sigma
+  this.model = model
+  this.initial_money = money
+  this.max_buy = max_buy
+  this.max_sell = max_sell
+  this.act = function(sequence){
+    predicted = this.model.predict(tf.tensor(sequence))
+    return {'action':tf_nj_list_flatten(predicted['decision'].argMax(1))[0],'buy':Math.round(tf_nj_list_flatten(predicted['buy'].flatten())[0])}
+  }
+  this.get_reward = function(weights){
+    initial_money = this.initial_money
+    starting_money = initial_money
+    this.model.weights = weights
+    state = get_state(close, 0, window_size + 1)
+    inventory = []
+    quantity = 0
+    for(var t = 0; t < l; t += skip){
+      acted = this.act(state)
+      buy = acted['buy']
+      action = acted['action']
+      next_state = get_state(close, t + 1, window_size + 1)
+      if(action == 1 && initial_money >= close[t]){
+        if(buy < 0) buy = 1
+        if(buy > this.max_buy) buy_units = this.max_buy
+        else buy_units = buy
+        total_buy = buy_units * close[t]
+        initial_money -= total_buy
+        inventory.push(total_buy)
+        quantity += buy_units
+      }
+      if(action == 2 && inventory.length > 0){
+        if(quantity>this.max_sell) sell_units = this.max_sell
+        else sell_units = quantity
+        quantity -= sell_units
+        total_sell = sell_units * close[t]
+        initial_money += total_sell
+      }
+      state = next_state
+    }
+    return ((initial_money - starting_money) / starting_money) * 100
+  }
+  this.fit = function(epoch, checkpoint){
+    this.es.train(epoch, checkpoint)
+  }
+  this.es = new Evolution_Strategy(this.model.get_weights(),this.get_reward.bind(this),this.population_size,this.sigma,this.learning_rate)
+}
+
+nn = new NeuralNetwork(window_size, 100, 3)
+agent = new Agent(15, 0.03, 0.1, nn,10000, 5, 5)
+agent.fit(10,1)
+</script>

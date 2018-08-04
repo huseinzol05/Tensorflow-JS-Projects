@@ -558,7 +558,7 @@ function simple_investor(real_signal,predicted_signal,delay,initial_money,max_bu
         current_decision = 0
       }
     }
-    if((predicted_signal[i] > current_val && state == 1)||((predicted_signal.length-i) < delay) && state == 1){
+    if((predicted_signal[i] > current_val && state == 1)||((predicted_signal.length-i) < delay && state == 1)){
       if(current_decision < delay) current_decision++;
       else{
         state = 0
