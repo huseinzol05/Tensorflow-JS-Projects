@@ -589,3 +589,22 @@ function simple_investor(real_signal,predicted_signal,delay,initial_money,max_bu
   return {'overall gain':(initial_money-starting_money),'overall investment':invest,
   'sell_Y':states_sell_Y,'sell_X':states_sell_X,'buy_Y':states_buy_Y,'buy_X':states_buy_X,'output':outputs}
 }
+
+function argsort_ascending(x){
+  return x.map((item, index) => [item, index]).sort(([count1], [count2]) => count1 - count2).map(([, item]) => item);
+}
+
+function argsort_descending(x){
+  return x.map((item, index) => [item, index]).sort(([count1], [count2]) => count2 - count1).map(([, item]) => item);
+}
+
+function isNumber(value) {
+  return typeof value === 'number' && isFinite(value);
+}
+
+function knn_cosine(embedded,x,top_k){
+  if(isNumber(x)) target_embedded = tf.slice(embedded,[x,0],[1,-1]);
+  else target_embedded = x;
+  normalized_embeddings = embedded.div(embedded.square().sum(1,true).sqrt())
+  return argsort_ascending(tf_nj_list_flatten(target_embedded.matMul(normalized_embeddings.transpose()).flatten())).slice(1,top_k+1)
+}
