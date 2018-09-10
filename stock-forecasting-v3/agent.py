@@ -6,6 +6,15 @@ from flask_cors import CORS
 app = Flask(__name__)
 CORS(app)
 
+def detect_outliers(close, date, threshold, **kwargs):
+    signal = np.abs((np.array(close) - np.mean(close)) / np.std(close))
+    threshold = (np.max(signal)-np.min(signal)) * threshold
+    x, y = [], []
+    for i in np.where(signal>threshold)[0]:
+        x.append(date[i])
+        y.append(close[i])
+    return {'date':x,'close':y}
+
 def get_state(data, t, n):
     d = t - n + 1
     block = data[d:t + 1] if d >= 0 else -d * [data[0]] + data[0:t + 1]
@@ -24,40 +33,29 @@ class Deep_Evolution_Strategy:
         self.learning_rate = learning_rate
 
     def _get_weight_from_population(self, weights, population):
-        weights_population = []
-        for index, i in enumerate(population):
-            jittered = self.sigma * i
-            weights_population.append(weights[index] + jittered)
-        return weights_population
+        return [weights[i] + self.sigma * population[i] for i in range(len(population))]
 
     def get_weights(self):
         return self.weights
 
-    def train(self, epoch = 100, print_every = 1):
-        lasttime = time.time()
+    def train(self, epoch = 100):
         for i in range(epoch):
             population = []
             rewards = np.zeros(self.population_size)
             for k in range(self.population_size):
-                x = []
-                for w in self.weights:
-                    x.append(np.random.randn(*w.shape))
-                population.append(x)
+                population.append([np.random.randn(*self.weights[w].shape) for w in range(len(self.weights))])
             for k in range(self.population_size):
                 weights_population = self._get_weight_from_population(self.weights, population[k])
                 rewards[k] = self.reward_function(weights_population)
             rewards = (rewards - np.mean(rewards)) / np.std(rewards)
-            for index, w in enumerate(self.weights):
-                A = np.array([p[index] for p in population])
-                self.weights[index] = w + self.learning_rate/(self.population_size * self.sigma) * np.dot(A.T, rewards).T
-            if (i+1) % print_every == 0:
-                print('iter %d. reward: %f' %  (i+1, self.reward_function(self.weights)))
-        print('time taken to train:', time.time()-lasttime, 'seconds')
+            for w in range(len(self.weights)):
+                A = np.array([p[w] for p in population])
+                self.weights[w] += self.learning_rate/(self.population_size * self.sigma) * np.dot(A.T, rewards).T
 
 class Model:
-    def __init__(self, input_size, layer_size, output_size):
+    def __init__(self, input_size, layer_size, **kwargs):
         self.weights = [np.random.randn(input_size, layer_size),
-                        np.random.randn(layer_size, output_size),
+                        np.random.randn(layer_size, 3),
                         np.random.randn(layer_size, 1),
                         np.random.randn(1, layer_size)]
 
@@ -75,7 +73,9 @@ class Model:
 
 class Agent:
 
-    def __init__(self, population_size, sigma, learning_rate, model, money, max_buy, max_sell, skip, window_size, l):
+    def __init__(
+    self, population_size, sigma, learning_rate, model,
+    money, max_buy, max_sell, skip, window_size, l, close, **kwargs):
         self.window_size = window_size
         self.skip = skip
         self.POPULATION_SIZE = population_size
@@ -86,7 +86,12 @@ class Agent:
         self.max_buy = max_buy
         self.max_sell = max_sell
         self.l = l
-        self.es = Deep_Evolution_Strategy(self.model.get_weights(), self.get_reward, self.POPULATION_SIZE, self.SIGMA, self.LEARNING_RATE)
+        self.close = close
+        self.es = Deep_Evolution_Strategy(
+        self.model.get_weights(),
+        self.get_reward,
+        self.POPULATION_SIZE,
+        self.SIGMA, self.LEARNING_RATE)
 
     def act(self, sequence):
         decision, buy = self.model.predict(np.array(sequence))
@@ -96,20 +101,20 @@ class Agent:
         initial_money = self.initial_money
         starting_money = initial_money
         self.model.weights = weights
-        state = get_state(close, 0, self.window_size + 1)
+        state = get_state(self.close, 0, self.window_size + 1)
         inventory = []
         quantity = 0
         for t in range(0,self.l,self.skip):
             action, buy = self.act(state)
-            next_state = get_state(close, t + 1, self.window_size + 1)
-            if action == 1 and initial_money >= close[t]:
+            next_state = get_state(self.close, t + 1, self.window_size + 1)
+            if action == 1 and initial_money >= self.close[t]:
                 if buy < 0:
                     buy = 1
                 if buy > self.max_buy:
                     buy_units = self.max_buy
                 else:
                     buy_units = buy
-                total_buy = buy_units * close[t]
+                total_buy = buy_units * self.close[t]
                 initial_money -= total_buy
                 inventory.append(total_buy)
                 quantity += buy_units
@@ -119,18 +124,18 @@ class Agent:
                 else:
                     sell_units = quantity
                 quantity -= sell_units
-                total_sell = sell_units * close[t]
+                total_sell = sell_units * self.close[t]
                 initial_money += total_sell
 
             state = next_state
         return ((initial_money - starting_money) / starting_money) * 100
 
-    def fit(self, iterations, checkpoint):
-        self.es.train(iterations,print_every=checkpoint)
+    def fit(self, iterations):
+        self.es.train(iterations)
 
     def buy(self, dates):
         initial_money = self.initial_money
-        state = get_state(close, 0, self.window_size + 1)
+        state = get_state(self.close, 0, self.window_size + 1)
         starting_money = initial_money
         inventory = []
         quantity = 0
@@ -139,22 +144,24 @@ class Agent:
         outputs = []
         for t in range(0,self.l,self.skip):
             action, buy = self.act(state)
-            next_state = get_state(close, t + 1, self.window_size + 1)
-            if action == 1 and initial_money >= close[t]:
+            next_state = get_state(self.close, t + 1, self.window_size + 1)
+            if action == 1 and initial_money >= self.close[t]:
                 if buy < 0:
                     buy = 1
                 if buy > self.max_buy:
                     buy_units = self.max_buy
                 else:
                     buy_units = buy
-                total_buy = buy_units * close[t]
+                total_buy = buy_units * self.close[t]
                 initial_money -= total_buy
                 inventory.append(total_buy)
                 quantity += buy_units
-                states_buy_X.push(dates[t])
-                states_buy_Y.push(close[t])
-                outputs.append("<tr><td>"+dates[t]+"</td><td>buy "+buy_units+" units</td><td>"+total_buy+"</td><td>NULL</td><td>"+initial_money+"</td></tr>")
-                print('day %d: buy %d units at price %f, total balance %f'%(t,buy_units, total_buy,initial_money))
+                states_buy_X.append(dates[t])
+                states_buy_Y.append(self.close[t])
+                outputs.append("<tr><td>"+dates[t] \
+                +"</td><td>buy "+str(buy_units)+" units</td><td>" \
+                +str(total_buy)+"</td><td>NULL</td><td>" \
+                +str(initial_money)+"</td></tr>")
             elif action == 2 and len(inventory) > 0:
                 bought_price = inventory.pop(0)
                 if quantity > self.max_sell:
@@ -164,57 +171,56 @@ class Agent:
                 if sell_units < 1:
                     continue
                 quantity -= sell_units
-                total_sell = sell_units * close[t]
+                total_sell = sell_units * self.close[t]
                 initial_money += total_sell
-                states_sell_X.push(dates[t])
-                states_sell_Y.push(close[t])
+                states_sell_X.append(dates[t])
+                states_sell_Y.append(self.close[t])
                 try:
                     invest = ((total_sell - bought_price) / bought_price) * 100
                 except:
                     invest = 0
-                outputs.push("<tr><td>"+dates[t]+"</td><td>sell "+sell_units+" units</td><td>"+total_sell+"</td><td>"+invest+"%</td><td>"+initial_money+"</td></tr>")
-                print('day %d, sell %d units at price %f, investment %f %%, total balance %f,'%(t, sell_units, total_sell, invest, initial_money))
+                outputs.append("<tr><td>"+dates[t] \
+                +"</td><td>sell "+str(sell_units)+" units</td><td>" \
+                +str(total_sell)+"</td><td>"+str(invest)+"%</td><td>"+str(initial_money)+"</td></tr>")
             state = next_state
 
         invest = ((initial_money - starting_money) / starting_money) * 100
-        print('\ntotal gained %f, total investment %f %%'%(initial_money - starting_money,invest))
-        return {'overall gain':(initial_money-starting_money),'overall investment':invest,
-        'sell_Y':states_sell_Y,'sell_X':states_sell_X,'buy_Y':states_buy_Y,'buy_X':states_buy_X,'output':outputs}
+        return {'overall gain':(initial_money-starting_money),
+        'overall investment':invest,
+        'sell_Y':states_sell_Y,'sell_X':states_sell_X,
+        'buy_Y':states_buy_Y,'buy_X':states_buy_X,'output':outputs}
 
-@app.route('/uploader', methods = ['POST'])
+@app.route('/stock', methods = ['POST'])
 def upload_file():
     try:
-        signal = json.loads(request.form['signal'])
-        l = len(signal)-1
-        dates = json.loads(request.form['date'])
-        layer_size = int(request.form['layer_size'])
-        population_size = int(request.form['population_size'])
-        sigma = float(request.form['sigma'])
-        learning_rate = float(request.form['learning_rate'])
-        money = float(request.form['money'])
-        max_buy = int(request.form['max_buy'])
-        max_sell = int(request.form['max_sell'])
-        skip = int(request.form['skip'])
-        window_size = int(request.form['window_size'])
-        epoch = int(request.form['epoch'])
-        if window_size > 30:
+        stock_data = json.loads(request.form['data'])
+        stock_data['l'] = len(stock_data['close'])-1
+        stock_data['input_size'] = stock_data['window_size']
+        if stock_data['window_size'] > 30:
             return json.dumps({'error':'window_size is too big, make sure it less than 30'})
-        if population_size > 40:
+        if stock_data['population_size'] > 40:
             return json.dumps({'error':'population_size is too big, make sure it less than 40'})
-        if layer_size > 200:
+        if stock_data['layer_size'] > 200:
             return json.dumps({'error':'layer_size is too big, make sure it less than 200'})
-        if epoch > 1000:
-            return json.dumps({'error':'epoch is too big, make sure it less than 1000'})
+        if stock_data['epoch'] > 100:
+            return json.dumps({'error':'epoch is too big, make sure it less than 100'})
         """
-        Model takes 3 parameters, input_size, layer_size, output_size
-        Agent takes 9 parameters, population_size, sigma, learning_rate, model, money, max_buy, max_sell, skip, window_size
+        Model takes 2 parameters, input_size, layer_size
+
+        Agent takes 9 parameters, population_size, sigma, learning_rate,
+        model, money, max_buy, max_sell, skip, window_size, close
+
+        Targeted every request not more than 10 sec.
         """
-        model = Model(window_size, layer_size, 3)
-        agent = Agent(population_size, sigma, learning_rate, model, money, max_buy, max_sell, skip, window_size)
-        agent.fit(epoch, 99999)
-        return json.dumps(agent.buy(dates))
+        model = Model(**stock_data)
+        stock_data['model'] = model
+        agent = Agent(**stock_data)
+        agent.fit(stock_data['epoch'])
+        return json.dumps(
+        {'agent':agent.buy(stock_data['date']),
+        'outliers':detect_outliers(**stock_data)
+        })
     except Exception as e:
         return json.dumps({'error':str(e)})
 
-if __name__ == '__main__':
-	app.run(host = '0.0.0.0', threaded = True, port = 8096)
+application = app
